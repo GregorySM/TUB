@@ -1,0 +1,72 @@
+%% Initialization
+
+close all
+clear
+clc
+
+%% Inputing and converting the Data to .mat
+
+read_and_convert_tdms = 0; 
+
+folder  = './Delta10/';
+
+if read_and_convert_tdms == 1
+    file_type = '*.tdms';
+else
+    file_type = '*.mat';    
+end
+Exp = {'Exp1' , 'Exp2', 'Exp3' , 'Exp4', 'Exp5'}; % Experiments number
+nameFiles = dir(strcat(folder,file_type));
+files = {nameFiles.name}; 
+
+for i=1:size(files,2)
+    
+    file = strcat(folder,files{:,i})   
+    if read_and_convert_tdms == 1;
+        matFileName=simpleConvertTDMS(file);  
+        DATA(i) = load(cell2mat(matFileName));
+    else
+        DATA(i) = load(file);   
+    end
+
+    
+end
+%% Preparing the Data for Estimation
+
+
+
+
+Channel = table(sgolayfilt(DATA(1).crio_databendflapblade3DMS02.Data,3,3501)); % Savitzky-Golay filtering
+
+
+grad = gradient(Channel(:,1));
+
+trigger_channel_index_neg = find(grad<=min(grad));  
+trigger_channel_index_pos = find(grad>=max(grad));        %% must be set so that it is capable on reading the data you need.    
+
+if trigger_channel_index_neg>trigger_channel_index_pos;                   
+     p1 = ones(size(Channel(1:trigger_channel_index_pos,i))) .* mean(Channel(1:trigger_channel_index_pos,i));
+     p2 = Channel(trigger_channel_index_pos+1:trigger_channel_index_neg,i);
+     p3 = ones(size(Channel(trigger_channel_index_neg+1:end,i))) .* mean(Channel(trigger_channel_index_neg+1:end,i));
+else
+     p1 = ones(size(Channel(1:trigger_channel_index_neg,i))) .* mean(Channel(1:trigger_channel_index_neg,i));
+     p2 = Channel(trigger_channel_index_neg+1:trigger_channel_index_pos,i);
+     p3 = ones(size(Channel(trigger_channel_index_pos+1:end,i))) .* mean(Channel(trigger_channel_index_pos+1:end,i));
+end
+
+Channel(:,i) = [p1;p2;p3];
+
+
+
+Fs = 10*10^3;
+Ts = 1/Fs;
+
+ze = iddata(ye, DATA(4).crio_dataservo1setpointAI313.Data,Ts);
+zv = iddata(Channel_v, DATA(3).crio_dataservo1setpointAI313.Data,Ts);
+
+ze = detrend(ze); % Remove trends from data for better prediction
+zv = detrend(zv);
+
+
+%% Estimating Input Delay
+
