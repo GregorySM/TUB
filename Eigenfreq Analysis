@@ -1,0 +1,86 @@
+%% Analysis to determine the eignefrequencies of the blades 1 & 2
+
+%% Data location on server : \\giga\wind\BeRT\16-11 Campaign 8\BeRT\16-15-15 BladeEigenfreq
+
+
+
+%% Initialization
+
+close all
+clear
+clc
+
+%% Import Data
+read_and_convert_tdms = 0;  % 1 = Yes, 0 = No
+    
+    
+if read_and_convert_tdms == 1
+    file_type = '*.tdms';
+else
+    file_type = '*.mat';    
+end
+
+folder = './Data/';
+
+nameFiles = dir(strcat(folder,file_type));
+files = {nameFiles.name}; 
+
+file = strcat(folder,files{:,1});   
+
+
+
+for i = 1:size(files,2)
+    clc
+    
+    file = strcat(folder,files{:,i});
+    if read_and_convert_tdms == 1;
+        matFileName=simpleConvertTDMS(file);  
+        DATA(i) = load(cell2mat(matFileName));
+    else
+        DATA(i) = load(file);   
+    end
+end
+
+%% Manual insert of data
+
+blade1_flap_1 = 10.49;
+blade1_flap_2 = 12.80;
+blade3_flap_1 = 15.06;
+blade3_flap_2 = 15.29;
+blade3_edge_1 = 49.75;
+
+max_speed = 300;
+op_speed = 3 * 60;
+max_op_speed = 3.3 * 60;
+
+%% FFTs
+
+
+
+%% Campell Diagram
+
+main_shaft_speed = 0:max_speed;
+
+figure
+grid on
+hold on
+xlim([0 300])
+ylim([0 50])
+xlabel('main shaft speed [l/min]')
+ylabel('frequecny [Hz]')
+
+plot(main_shaft_speed./60,'k','DisplayName','p1')
+plot(2.*main_shaft_speed./60,'k:','DisplayName','p2')
+plot(3.*main_shaft_speed./60,'k--','DisplayName','p3')
+plot([0 max_speed],[blade1_flap_1 blade1_flap_1],'b','DisplayName','Blade1 flap 1')
+plot([0 max_speed],[blade1_flap_2 blade1_flap_2],'Color',[0 0 0.75],'DisplayName','Blade1 flap2')
+plot([0 max_speed],[blade3_flap_1 blade3_flap_1],'r','DisplayName','Blade3 flap 1')
+plot([0 max_speed],[blade3_flap_2 blade3_flap_2],'Color',[0.75 0 0],'DisplayName','Blade3 flap1')
+plot([0 max_speed],[blade3_edge_1 blade3_edge_1],'k','DisplayName','Blade3 Edge1')
+plot([op_speed op_speed],[0 50],'r--')
+plot([maxop_speed op_speed],[0 50],'r--')
+legend('show')
+
+
+
+
