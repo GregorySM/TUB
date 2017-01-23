@@ -1,6 +1,10 @@
 %% Analysis to determine the eignefrequencies of the blades 1 & 2
 
-%% Data location on server : \\giga\wind\BeRT\16-11 Campaign 8\BeRT\16-15-15 BladeEigenfreq
+%% Data location on server :
+
+%\\giga\wind\BeRT\16-11 Campaign 8\BeRT\16-15-15 BladeEigenfreq
+
+%\\giga\wind\BeRT\16-11 Campaign 8\BeRT\16-12-14 Vibration - Hammertest
 
 
 
@@ -46,20 +50,41 @@ Fs = 10^4; % Hz
 Ts = 1/Fs;
 
 blade1_flap_1 = 10.49;
-blade1_flap_2 = 12.80;
+blade1_flap_2 = 17;
 blade3_flap_1 = 15.06;
-blade3_flap_2 = 15.29;
+blade3_flap_2 = 17;
 blade3_edge_1 = 49.75;
 Tower_acc = 8.14;
 Tower_thrust = 7.98;
 
 max_speed = 300;
+minexp_op_speed = 2.5 *60;
 op_speed = 3 * 60;
+maxexp_op_speed = 3.3 * 60;
 max_op_speed = 250;
-speed_low = 2.5 *60;
-speed_high = 3.3 * 60;
 
 
+
+%% FFTs
+% 
+% Blade_1 = DATA(1).crio_databendflapblade1DMS11.Data;
+% Blade_3 = DATA(7).crio_databendflapblade3DMS02.Data;
+% 
+% B1_FFT = fft(Blade_1);
+% m1 = abs(B1_FFT);
+% figure
+% plot(m1)
+% title('Blade 1 FFT Magnitude')
+% set(gca,'xscale','log')
+% 
+% B3_FFT = fft(Blade_3);
+% m2 = abs(B3_FFT);
+% f = (0:length(B3_FFT)-1)*50/length(B3_FFT);
+% figure
+% 
+% plot(f,m2)
+% title('Blade 3 FFT Magnitude')
+% set(gca,'xscale','log')
 
 
 %% Campell Diagram
@@ -74,24 +99,32 @@ ylim([0 50])
 xlabel('main shaft speed [l/min]')
 ylabel('frequecny [Hz]')
 title('Campbell Diagram for BeRT')
+legend('hide')
+% Plot 1p up to 6p
 plot(main_shaft_speed./60,'k','DisplayName','p1','LineWidth',2)
 plot(2*main_shaft_speed./60,'k:','DisplayName','p2','LineWidth',2)
 plot(3*main_shaft_speed./60,'k--','DisplayName','p3','LineWidth',2)
 plot(4*main_shaft_speed./60,'k','DisplayName','p4','LineWidth',2)
 plot(5*main_shaft_speed./60,'k:','DisplayName','p5','LineWidth',2)
 plot(6*main_shaft_speed./60,'k--','DisplayName','p6','LineWidth',2)
+% Plot eigen freq
 plot([0 max_speed],[blade1_flap_1 blade1_flap_1],'b','DisplayName','Blade1 flap 1','LineWidth',2)
 plot([0 max_speed],[blade1_flap_2 blade1_flap_2],'Color',[0 0 0.75],'DisplayName','Blade1 flap2','LineWidth',2)
 plot([0 max_speed],[blade3_flap_1 blade3_flap_1],'r','DisplayName','Blade3 flap 1','LineWidth',2)
 plot([0 max_speed],[blade3_flap_2 blade3_flap_2],'Color',[0.75 0 0],'DisplayName','Blade3 flap1','LineWidth',2)
-plot([0 max_speed],[blade3_edge_1 blade3_edge_1],'k','DisplayName','Blade3 Edge1','LineWidth',2)
+%plot([0 max_speed],[blade3_edge_1 blade3_edge_1],'k','DisplayName','Blade3 Edge1','LineWidth',2)
 plot([0 max_speed],[Tower_acc Tower_acc],'c','DisplayName','Tower acc','LineWidth',2)
 plot([0 max_speed],[Tower_thrust Tower_thrust],'Color',[0 0.75 0.75],'DisplayName','Tower thrust','LineWidth',2)
+
 legend('show')
 legend('Location','northwest')
+% Plot speeds
+plot([minexp_op_speed minexp_op_speed],[0 50],'k--')
 plot([op_speed op_speed],[0 50],'r--')
+plot([maxexp_op_speed maxexp_op_speed],[0 50],'k--')
 plot([max_op_speed max_op_speed],[0 50],'r--')
 text(op_speed-22,45,'n_o_p_a_r_a_t_i_o_n \rightarrow ')
 text(max_op_speed,45,'\leftarrow n_m_a_x ')
-
+text(maxexp_op_speed,45,'\leftarrow 3.3 Hz ')
+text(minexp_op_speed-15,45,'2.5 Hz \rightarrow')
 
