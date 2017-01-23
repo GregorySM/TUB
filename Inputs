@@ -1,0 +1,46 @@
+%% Initialization
+
+close all
+clear
+clc
+
+%% Inputing and converting the Data to .mat
+
+read_and_convert_tdms = 0; 
+
+folder  = './Delta10/';
+
+if read_and_convert_tdms == 1
+    file_type = '*.tdms';
+else
+    file_type = '*.mat';    
+end
+%Exp = {'Exp1' , 'Exp2', 'Exp3' , 'Exp4', 'Exp5'}; % Experiments number
+nameFiles = dir(strcat(folder,file_type));
+files = {nameFiles.name}; 
+
+for i=1:size(files,2)
+    
+    file{i} = strcat(folder,files{:,i});   
+    if read_and_convert_tdms == 1;
+        matFileName=simpleConvertTDMS(file{i});  
+        DATA(i) = load(cell2mat(matFileName));
+    else
+        DATA(i) = load(file{i});   
+    end
+    
+    
+    p = files{:,i}(13:end-4);
+    p =cellstr(p);
+    
+    
+    
+    
+end
+
+%% Constants
+
+Fs = 10^4;      % Sampling frequency 10 KHz
+Ts = 1/Fs;      % Sampling period
+
+r_speed = 3; % Rotational speed of the turbine in Hz
