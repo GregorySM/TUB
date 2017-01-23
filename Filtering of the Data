@@ -1,0 +1,104 @@
+%% Initialization
+
+close all
+clear
+clc
+
+%% Inputing and converting the Data to .mat
+
+read_and_convert_tdms = 0; 
+
+folder  = './Delta10/';
+
+if read_and_convert_tdms == 1
+    file_type = '*.tdms';
+else
+    file_type = '*.mat';    
+end
+%Exp = {'Exp1' , 'Exp2', 'Exp3' , 'Exp4', 'Exp5'}; % Experiments number
+nameFiles = dir(strcat(folder,file_type));
+files = {nameFiles.name}; 
+
+for i=1:size(files,2)
+    
+    file{i} = strcat(folder,files{:,i});   
+    if read_and_convert_tdms == 1;
+        matFileName=simpleConvertTDMS(file{i});  
+        DATA(i) = load(cell2mat(matFileName));
+    else
+        DATA(i) = load(file{i});   
+    end
+    
+    
+    p = files{:,i}(13:end-4);
+    p =cellstr(p);
+    
+    
+    
+    
+end
+
+%% Constants
+
+Fs = 10^4;      % Sampling frequency 10 KHz
+Ts = 1/Fs;      % Sampling period
+
+r_speed = 3;    % Rotational speed of the turbine in Hz
+
+
+
+%% Filtering Data
+
+%------------ Electronic Noise Filtering ------------%
+
+Channel = DATA(2).crio_databendflapblade3DMS02.Data;
+N = length(Channel);
+t = (0:N-1)/Fs;  
+
+Fnorm = 75/(Fs/2);  % Normalization of the cut-off frequency
+
+df = designfilt('lowpassfir','FilterOrder',70,'CutoffFrequency',Fnorm); % Filter Design 
+
+% Calculation of the Delay the Filter is introducing
+grpdelay(df,2048,Fs)    % plot group delay
+D = mean(grpdelay(df)); % filter delay in samples
+
+% Compansation for this delay by adding zeros to the end of the signal. The amount of zeros is equal to the number of delayed 
+% samples 
+Channel_filt = filter(df,[Channel; zeros(D,1)]);
+Channel_filt = Channel_filt(D+1:end);  
+
+% plotting the results and comparing raw and filtered
+
+figure
+plot(t,Channel,t,Channel_filt,'r','linewidth',1.5);
+title('Filtered Waveforms');
+xlabel('Time (s)')
+legend('Original Noisy Signal','Filtered Signal');
+grid on
+axis tight
+
+
+
+%------------ Smoothing Data over One Rotation ------------%
+
+One_rotation = floor(Fs/r_speed);  % We use a window equal to how many samples we have for one full
+                                   % rotation of the turbine
+
+coeffOneRotation = ones(1, One_rotation)/One_rotation;
+
+avgOneRotation = filter(coeffOneRotation, 1, Channel_filt);
+
+fDelay = (length(coeffOneRotation )-1)/2;   % Any symmetric filter of length N will have a delay of (N-1)/2 samples.
+  
+
+figure
+plot(t,Channel_filt,t-Ts*fDelay,avgOneRotation,'linewidth',1.5);
+title('Smoothed Waveforms Over One Rotation');
+xlabel('Time (s)')
+legend('Input Channel','Smoothed Signal');
+grid on
+axis tight
+
+
+
