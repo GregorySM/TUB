@@ -8,7 +8,7 @@ clc
 
 read_and_convert_tdms = 0; 
 load('dms_calib.mat')
-folder  = './Delta10/';
+folder  = './30Hz_520rpm/Delta10/';
 
 if read_and_convert_tdms == 1
     file_type = '*.tdms';
@@ -49,14 +49,14 @@ r_speed = 3;    % Rotational speed of the turbine in Hz
 %% Calib
 % Flapwise strain gauges  calib
   
-Estimation_Data = DATA(2).crio_databendflapblade3DMS02.Data * blade3_flap.m + blade3_flap.n;
+Estimation_Data = DATA(4).crio_databendflapblade3DMS02.Data * blade3_flap.m + blade3_flap.n;
   
 Validation_Data = DATA(5).crio_databendflapblade3DMS02.Data * blade3_flap.m + blade3_flap.n;
 
 
 % Servos' setpoint calib
 
- u_e = DATA(2).crio_dataservo1setpointAI313.Data * -0.068965517241379 + 98.965517241379300;
+ u_e = DATA(4).crio_dataservo1setpointAI313.Data * -0.068965517241379 + 98.965517241379300;
 
  u_v  = DATA(5).crio_dataservo1setpointAI313.Data * -0.068965517241379 + 98.965517241379300;
 
@@ -87,10 +87,13 @@ D = mean(grpdelay(df)); % filter delay in samples
 
 Channel_filt_e = filter(df,[Channel_e; zeros(D,1)]);
 Channel_filt_e = Channel_filt_e(D+1:end);  
+% 
+% Channel_filt_v = filter(df,[Channel_v; (ones(D,1) * mean(Channel_filt_v(1:D)))]);
+% Channel_filt_v = Channel_filt_v(D+1:end);
+% plotting the results and comparing raw and filtered
 
 Channel_filt_v = filter(df,[Channel_v; zeros(D,1)]);
-Channel_filt_v = Channel_filt_v(D+1:end);
-% plotting the results and comparing raw and filtered
+Channel_filt_v = Channel_filt_v(D+1:end);  
 
 figure
 plot(t_e,Channel_e,t_e,Channel_filt_e,'r','linewidth',1.5);
@@ -142,6 +145,18 @@ axis tight
 z_e = iddata(avgOneRotation_e(20000:end-20000),u_e(20000:end-20000),Ts);
 z_v = iddata(avgOneRotation_v(20000:end-20000),u_v(20000:end-20000),Ts);
 
+z_e.InputName = 'Beta Angle';
+z_e.InputUnit = 'Degrees';
+z_e.OutputName = 'Flapwise Root Bending Moment';
+z_e.OutputUnit = 'Nm';
+z_e.TimeUnit = 'Seconds';
+
+z_v.InputName = 'Beta Angle';
+z_v.InputUnit = 'Degrees';
+z_v.OutputName = 'Flapwise Root Bending Moment';
+z_v.OutputUnit = 'Nm';
+z_v.TimeUnit = 'Seconds';
+
 
 
 
@@ -153,16 +168,30 @@ plot(z_v)
 
 % 
 % 
-% z_e = detrend(z_e);
+z_e = detrend(z_e);
+
+z_v = detrend(z_v);
 % 
-% z_v = detrend(z_v);
+%% Delay estimation
 % 
-% %% Delay estimation
-% 
-% mp = ssest(z_e)
-% 
-% h = stepplot(mp,'r',2); % Blue for direct estimate, red for mp
-% showConfidence(h)
-% 
-% compare(z_v,mp)
+tf1 = tfest(z_e,1,0,nan)
+resid(tf1,z_e)
+
+ 
+figure
+plot(t_v,Channel_filt_v,'r','linewidth',1.5);
+title('Filtered Waveforms Validation Data');
+xlabel('Time (s)')
+legend('Original Noisy Signal','Filtered Signal');
+grid on
+axis tight
+
+
+
+
+
+
+
+
+
 
