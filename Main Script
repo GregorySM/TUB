@@ -1,0 +1,168 @@
+%% Initialization
+
+close all
+clear
+clc
+
+%% Inputing and converting the Data to .mat
+
+read_and_convert_tdms = 0; 
+load('dms_calib.mat')
+folder  = './Delta10/';
+
+if read_and_convert_tdms == 1
+    file_type = '*.tdms';
+else
+    file_type = '*.mat';    
+end
+%Exp = {'Exp1' , 'Exp2', 'Exp3' , 'Exp4', 'Exp5'}; % Experiments number
+nameFiles = dir(strcat(folder,file_type));
+files = {nameFiles.name}; 
+
+for i=1:size(files,2)
+    
+    file{i} = strcat(folder,files{:,i});   
+    if read_and_convert_tdms == 1;
+        matFileName=simpleConvertTDMS(file{i});  
+        DATA(i) = load(cell2mat(matFileName));
+    else
+        DATA(i) = load(file{i});   
+    end
+    
+    
+    p = files{:,i}(13:end-4);
+    p =cellstr(p);
+    
+    
+    
+    
+end
+
+%% Constants
+
+Fs = 10^4;      % Sampling frequency 10 KHz
+Ts = 1/Fs;      % Sampling period
+
+r_speed = 3;    % Rotational speed of the turbine in Hz
+
+
+%% Calib
+% Flapwise strain gauges  calib
+  
+Estimation_Data = DATA(2).crio_databendflapblade3DMS02.Data * blade3_flap.m + blade3_flap.n;
+  
+Validation_Data = DATA(5).crio_databendflapblade3DMS02.Data * blade3_flap.m + blade3_flap.n;
+
+
+% Servos' setpoint calib
+
+ u_e = DATA(2).crio_dataservo1setpointAI313.Data * -0.068965517241379 + 98.965517241379300;
+
+ u_v  = DATA(5).crio_dataservo1setpointAI313.Data * -0.068965517241379 + 98.965517241379300;
+
+ 
+ 
+%% Filtering Data
+
+%------------ Electronic Noise Filtering ------------%
+
+Channel_e = Estimation_Data;
+Channel_v = Validation_Data;
+N_e = length(Channel_e);
+t_e = (0:N_e-1)/Fs;  
+
+N_v = length(Channel_v);
+t_v = (0:N_v-1)/Fs; 
+
+Fnorm = 75/(Fs/2);  % Normalization of the cut-off frequency
+
+df = designfilt('lowpassfir','FilterOrder',70,'CutoffFrequency',Fnorm); % Filter Design 
+
+% Calculation of the Delay the Filter is introducing
+grpdelay(df,2048,Fs)    % plot group delay
+D = mean(grpdelay(df)); % filter delay in samples
+
+% Compansation for this delay by adding zeros to the end of the signal. The amount of zeros is equal to the number of delayed 
+% samples 
+
+Channel_filt_e = filter(df,[Channel_e; zeros(D,1)]);
+Channel_filt_e = Channel_filt_e(D+1:end);  
+
+Channel_filt_v = filter(df,[Channel_v; zeros(D,1)]);
+Channel_filt_v = Channel_filt_v(D+1:end);
+% plotting the results and comparing raw and filtered
+
+figure
+plot(t_e,Channel_e,t_e,Channel_filt_e,'r','linewidth',1.5);
+title('Filtered Waveforms Estimation Data');
+xlabel('Time (s)')
+legend('Original Noisy Signal','Filtered Signal');
+grid on
+axis tight
+
+figure
+plot(t_v,Channel_v,t_v,Channel_filt_v,'r','linewidth',1.5);
+title('Filtered Waveforms Validation Data');
+xlabel('Time (s)')
+legend('Original Noisy Signal','Filtered Signal');
+grid on
+axis tight
+
+
+%------------ Smoothing Data over One Rotation ------------%
+
+One_rotation = floor(Fs/r_speed);  % We use a window equal to how many samples we have for one full
+                                   % rotation of the turbine
+
+coeffOneRotation = ones(1, One_rotation)/One_rotation;
+
+avgOneRotation_e = filter(coeffOneRotation, 1, Channel_filt_e);
+avgOneRotation_v = filter(coeffOneRotation, 1, Channel_filt_v);
+fDelay = (length(coeffOneRotation )-1)/2;   % Any symmetric filter of length N will have a delay of (N-1)/2 samples.
+  
+
+figure
+plot(t_e,Channel_filt_e,t_e-Ts*fDelay,avgOneRotation_e,'linewidth',1.5);
+title('Smoothed Waveforms Over One Rotation Estimation Data');
+xlabel('Time (s)')
+legend('Input Channel','Smoothed Signal');
+grid on
+axis tight
+
+figure
+plot(t_v,Channel_filt_v,t_v-Ts*fDelay,avgOneRotation_v,'linewidth',1.5);
+title('Smoothed Waveforms Over One Rotation Validation Data');
+xlabel('Time (s)')
+legend('Input Channel','Smoothed Signal');
+grid on
+axis tight
+
+%% Preparation of Data for system identification
+% 
+z_e = iddata(avgOneRotation_e(20000:end-20000),u_e(20000:end-20000),Ts);
+z_v = iddata(avgOneRotation_v(20000:end-20000),u_v(20000:end-20000),Ts);
+
+
+
+
+figure
+plot(z_e)
+
+figure
+plot(z_v)
+
+% 
+% 
+% z_e = detrend(z_e);
+% 
+% z_v = detrend(z_v);
+% 
+% %% Delay estimation
+% 
+% mp = ssest(z_e)
+% 
+% h = stepplot(mp,'r',2); % Blue for direct estimate, red for mp
+% showConfidence(h)
+% 
+% compare(z_v,mp)
+
