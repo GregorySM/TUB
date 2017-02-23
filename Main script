@@ -5,9 +5,11 @@ clear
 clc
 
 %% Inputing and converting the Data to .mat
-
 read_and_convert_tdms = 0; 
 load('dms_calib.mat')
+
+
+%% Delta 5
 folder  = './Delta5/';
 
 if read_and_convert_tdms == 1
@@ -17,21 +19,49 @@ else
 end
 %Exp = {'Exp1' , 'Exp2', 'Exp3' , 'Exp4', 'Exp5'}; % Experiments number
 nameFiles = dir(strcat(folder,file_type));
-files = {nameFiles.name}; 
+files_delta5 = {nameFiles.name}; 
 
 
-
-
-for i=1:size(files,2)
+for i=1:size(files_delta5,2)
     
-    file{i} = strcat(folder,files{:,i});   
+    file{i} = strcat(folder,files_delta5{:,i});   
     if read_and_convert_tdms == 1;
         matFileName=simpleConvertTDMS(file{i});  
-        DATA(i) = load(cell2mat(matFileName));
+        DATA_d5(i) = load(cell2mat(matFileName));
     else
-        DATA(i) = load(file{i});   
+        DATA_d5(i) = load(file{i});   
     end
-    p = files{:,i}(13:end-4);
+    p = files_delta5{:,i}(13:end-4);
+    p =cellstr(p);  
+end
+
+clc
+%% Delta 10 
+
+
+folder  = './Delta10/';
+
+if read_and_convert_tdms == 1
+    file_type = '*.tdms';
+else
+    file_type = '*.mat';    
+end
+nameFiles = dir(strcat(folder,file_type));
+files_delta10 = {nameFiles.name}; 
+
+
+
+
+for i=1:size(files_delta10,2)
+    
+    file{i} = strcat(folder,files_delta10{:,i});   
+    if read_and_convert_tdms == 1;
+        matFileName=simpleConvertTDMS(file{i});  
+        DATA_d10(i) = load(cell2mat(matFileName));
+    else
+        DATA_d10(i) = load(file{i});   
+    end
+    p = files_delta10{:,i}(13:end-4);
     p =cellstr(p);  
 end
 
@@ -51,25 +81,16 @@ r_speed = 3;    % Rotational speed of the turbine in Hz
 %% Filtering Data
 
 
-[Estimation_Data, Validation_Data] = filtering(DATA, Fs, r_speed);
+  [Estimation_Data_d5, Validation_Data_d5] = filtering(DATA_d5, Fs, r_speed);
 
+  [Data_d10] = filtering_d10(DATA_d10, Fs, r_speed);
 
 
 
 
 %% Delay estimation
-
-d = merge(Estimation_Data(1).iddata,Estimation_Data(2).iddata,Estimation_Data(3).iddata, ...
-    Estimation_Data(4).iddata,Estimation_Data(5).iddata,Estimation_Data(6).iddata,Estimation_Data(7).iddata,Estimation_Data(8).iddata);
-
-tf1 = tfest(d,1,0);
-
-tf2 = tfest(d,2,1);
-
-
-figure
-compare(Validation_Data(1).iddata,tf1,tf2)
-
-% plot(Estimation_Data(2).iddata)
-% figure
-% plot(Validation_Data(1).iddata)
+% 
+  d = merge(Validation_Data_d5(4).iddata,Validation_Data_d5(2).iddata,Estimation_Data_d5(1).iddata,Estimation_Data_d5(3).iddata);
+  v = Data_d10(4).iddata;
+  v2 = Data_d10(2).iddata;
+ 
