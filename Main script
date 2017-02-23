@@ -91,6 +91,30 @@ r_speed = 3;    % Rotational speed of the turbine in Hz
 %% Delay estimation
 % 
   d = merge(Validation_Data_d5(4).iddata,Validation_Data_d5(2).iddata,Estimation_Data_d5(1).iddata,Estimation_Data_d5(3).iddata);
+  
+  d2 = merge(Estimation_Data_d5(4).iddata,Estimation_Data_d5(2).iddata,Validation_Data_d5(1).iddata,Validation_Data_d5(3).iddata); 
+  
   v = Data_d10(4).iddata;
   v2 = Data_d10(2).iddata;
- 
+  
+  
+%% System identification
+opt = armaxOptions;
+opt.Regularization.Lambda = 1;
+m = armax(d,[2 2 2 1],opt);
+
+opt1 = armaxOptions('Focus','simulation');
+m1 = armax(d,[2 2 2 1],opt1);
+m2 = armax(d2,[2 2 2 1],opt1);
+
+opt2 = armaxOptions;
+opt2.Focus = 'simulation';
+opt2.SearchMethod = 'lm';
+opt2.SearchOption.MaxIter = 10;
+opt2.Display = 'on';
+sys = armax(d,[2 2 2 1],opt2);
+sys2 = armax(d2,[2 2 2 1],opt2);
+
+
+compare(v,m,m1,sys)
+compare(v2,m2,sys2)
