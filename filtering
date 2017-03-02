@@ -1,33 +1,33 @@
 
-function [Estimation_Data, Validation_Data] = filtering (DATA, Fs, r_speed)
+function [Estimation_Data_d5, Validation_Data_d5] = filtering (DATA_d5, Fs, r_speed)
 Ts = 1/Fs;
 
 
 
 
-for i=1:8
+for i=1:4
    
     
-   Estimation_Data(i).input = DATA(i).crio_dataservo1setpointAI313.Data * -0.068965517241379 + 98.965517241379300;
-   Estimation_Data(i).output = DATA(i).crio_databendflapblade3DMS02.Data *   -8.212171639296294e+05 + -1.973389124055448e+02;
+   Estimation_Data_d5(i).input = DATA_d5(i).crio_dataservo1setpointAI313.Data * -0.068965517241379 + 98.965517241379300;
+   Estimation_Data_d5(i).output = DATA_d5(i).crio_databendflapblade3DMS02.Data *   -8.212171639296294e+05 + -1.973389124055448e+02;
 
-   Validation_Data(i).input = DATA(i).crio_dataservo1setpointAI313.Data * -0.068965517241379 + 98.965517241379300;
-   Validation_Data(i).output = DATA(i).crio_databendflapblade3DMS02.Data * -8.212171639296294e+05 + -1.973389124055448e+02;
+   Validation_Data_d5(i).input = DATA_d5(i+4).crio_dataservo1setpointAI313.Data * -0.068965517241379 + 98.965517241379300;
+   Validation_Data_d5(i).output = DATA_d5(i+4).crio_databendflapblade3DMS02.Data * -8.212171639296294e+05 + -1.973389124055448e+02;
    
    %% Filtering Data
 
 %------------ Electronic Noise Filtering ------------%
 
 
-N_e = length(Estimation_Data(i).output);
+N_e = length(Estimation_Data_d5(i).output);
 t_e = (0:N_e-1)/Fs;  
 
-N_v = length(Validation_Data(i).output);
+N_v = length(Validation_Data_d5(i).output);
 t_v = (0:N_v-1)/Fs; 
 
 Fnorm = 75/(Fs/2);  % Normalization of the cut-off frequency
 
-df = designfilt('lowpassfir','FilterOrder',70,'CutoffFrequency',Fnorm); % Filter Design 
+df = designfilt('lowpassfir','FilterOrder',40,'CutoffFrequency',Fnorm); % Filter Design 
 
 % Calculation of the Delay the Filter is introducing
 D = mean(grpdelay(df)); % filter delay in samples
@@ -35,11 +35,11 @@ D = mean(grpdelay(df)); % filter delay in samples
 % Compansation for this delay by adding zeros to the end of the signal. The amount of zeros is equal to the number of delayed 
 % samples 
 
-Channel_filt_e = filter(df,[Estimation_Data(i).output; zeros(D,1)]);
-Estimation_Data(i).Filtered = Channel_filt_e(D+1:end);  
+Channel_filt_e = filter(df,[Estimation_Data_d5(i).output; zeros(D,1)]);
+Estimation_Data_d5(i).Filtered = Channel_filt_e(D+1:end);  
 
-Channel_filt_v = filter(df,[ Validation_Data(i).output; zeros(D,1)]);
-Validation_Data(i).Filtered = Channel_filt_v(D+1:end);
+Channel_filt_v = filter(df,[ Validation_Data_d5(i).output; zeros(D,1)]);
+Validation_Data_d5(i).Filtered = Channel_filt_v(D+1:end);
 % plotting the results and comparing raw and filtered
 
 
@@ -68,10 +68,20 @@ One_rotation = floor(Fs/r_speed);  % We use a window equal to how many samples w
 
 coeffOneRotation = ones(1, One_rotation)/One_rotation;
 
-Estimation_Data(i).avgOneRotation = filter(coeffOneRotation, 1, Estimation_Data(i).Filtered);
-Validation_Data(i).avgOneRotation = filter(coeffOneRotation, 1, Validation_Data(i).Filtered);
+Estimation_Data_d5(i).avgOneRotation = filter(coeffOneRotation, 1, Estimation_Data_d5(i).Filtered);
+Validation_Data_d5(i).avgOneRotation = filter(coeffOneRotation, 1, Validation_Data_d5(i).Filtered);
 fDelay = (length(coeffOneRotation )-1)/2;   % Any symmetric filter of length N will have a delay of (N-1)/2 samples.
-  
+
+
+
+%%
+% 
+
+ Estimation_Data_d5(i).avgOneRotation = medfilt1(Estimation_Data_d5(i).avgOneRotation,300);
+% Estimation_Data(i).avgOneRotation = medfilt1(Estimation_Data(i).avgOneRotation,300);
+
+
+%%
 % 
 % figure
 % plot(t_e,Channel_filt_e,t_e-Ts*fDelay,avgOneRotation_e,'linewidth',1.5);
@@ -89,10 +99,11 @@ fDelay = (length(coeffOneRotation )-1)/2;   % Any symmetric filter of length N w
 % grid on
 % axis tight
 
-Estimation_Data(i).iddata = iddata( Estimation_Data(i).avgOneRotation(4050:end),Estimation_Data(i).input(4050:end),Ts);
-Validation_Data(i).iddata = iddata(Validation_Data(i).avgOneRotation(3700:end),Validation_Data(i).input(3700:end),Ts);
+Estimation_Data_d5(i).iddata = iddata( Estimation_Data_d5(i).avgOneRotation(4050:end),Estimation_Data_d5(i).input(4050:end),Ts);
+Validation_Data_d5(i).iddata = iddata(Validation_Data_d5(i).avgOneRotation(3700:end),Validation_Data_d5(i).input(3700:end),Ts);
 
- 
+Estimation_Data_d5(i).iddata = detrend(Estimation_Data_d5(i).iddata);
+Validation_Data_d5(i).iddata = detrend(Validation_Data_d5(i).iddata);
 
 
 end
