@@ -5,10 +5,12 @@ clear
 clc
 
 %% Inputing and converting the Data to .mat
-
 read_and_convert_tdms = 0; 
 load('dms_calib.mat')
-folder  = './30Hz_520rpm/Delta10/';
+
+
+%% Delta 5
+folder  = './Delta5/';
 
 if read_and_convert_tdms == 1
     file_type = '*.tdms';
@@ -17,27 +19,55 @@ else
 end
 %Exp = {'Exp1' , 'Exp2', 'Exp3' , 'Exp4', 'Exp5'}; % Experiments number
 nameFiles = dir(strcat(folder,file_type));
-files = {nameFiles.name}; 
+files_delta5 = {nameFiles.name}; 
 
-for i=1:size(files,2)
+
+for i=1:size(files_delta5,2)
     
-    file{i} = strcat(folder,files{:,i});   
+    file{i} = strcat(folder,files_delta5{:,i});   
     if read_and_convert_tdms == 1;
         matFileName=simpleConvertTDMS(file{i});  
-        DATA(i) = load(cell2mat(matFileName));
+        DATA_d5(i) = load(cell2mat(matFileName));
     else
-        DATA(i) = load(file{i});   
+        DATA_d5(i) = load(file{i});   
     end
-    
-    
-    p = files{:,i}(13:end-4);
-    p =cellstr(p);
-    
-    
-    
-    
+    p = files_delta5{:,i}(13:end-4);
+    p =cellstr(p);  
 end
 
+clc
+%% Delta 10 
+
+
+folder  = './Delta10/';
+
+if read_and_convert_tdms == 1
+    file_type = '*.tdms';
+else
+    file_type = '*.mat';    
+end
+nameFiles = dir(strcat(folder,file_type));
+files_delta10 = {nameFiles.name}; 
+
+
+
+
+for i=1:size(files_delta10,2)
+    
+    file{i} = strcat(folder,files_delta10{:,i});   
+    if read_and_convert_tdms == 1;
+        matFileName=simpleConvertTDMS(file{i});  
+        DATA_d10(i) = load(cell2mat(matFileName));
+    else
+        DATA_d10(i) = load(file{i});   
+    end
+    p = files_delta10{:,i}(13:end-4);
+    p =cellstr(p);  
+end
+
+
+
+clc
 %% Constants
 
 Fs = 10^4;      % Sampling frequency 10 KHz
@@ -46,152 +76,60 @@ Ts = 1/Fs;      % Sampling period
 r_speed = 3;    % Rotational speed of the turbine in Hz
 
 
-%% Calib
-% Flapwise strain gauges  calib
-  
-Estimation_Data = DATA(4).crio_databendflapblade3DMS02.Data * blade3_flap.m + blade3_flap.n;
-  
-Validation_Data = DATA(5).crio_databendflapblade3DMS02.Data * blade3_flap.m + blade3_flap.n;
-
-
-% Servos' setpoint calib
-
- u_e = DATA(4).crio_dataservo1setpointAI313.Data * -0.068965517241379 + 98.965517241379300;
-
- u_v  = DATA(5).crio_dataservo1setpointAI313.Data * -0.068965517241379 + 98.965517241379300;
-
  
  
 %% Filtering Data
 
-%------------ Electronic Noise Filtering ------------%
 
-Channel_e = Estimation_Data;
-Channel_v = Validation_Data;
-N_e = length(Channel_e);
-t_e = (0:N_e-1)/Fs;  
+  [Estimation_Data_d5, Validation_Data_d5] = filtering(DATA_d5, Fs, r_speed);
 
-N_v = length(Channel_v);
-t_v = (0:N_v-1)/Fs; 
-
-Fnorm = 75/(Fs/2);  % Normalization of the cut-off frequency
-
-df = designfilt('lowpassfir','FilterOrder',70,'CutoffFrequency',Fnorm); % Filter Design 
-
-% Calculation of the Delay the Filter is introducing
-grpdelay(df,2048,Fs)    % plot group delay
-D = mean(grpdelay(df)); % filter delay in samples
-
-% Compansation for this delay by adding zeros to the end of the signal. The amount of zeros is equal to the number of delayed 
-% samples 
-
-Channel_filt_e = filter(df,[Channel_e; zeros(D,1)]);
-Channel_filt_e = Channel_filt_e(D+1:end);  
-% 
-% Channel_filt_v = filter(df,[Channel_v; (ones(D,1) * mean(Channel_filt_v(1:D)))]);
-% Channel_filt_v = Channel_filt_v(D+1:end);
-% plotting the results and comparing raw and filtered
-
-Channel_filt_v = filter(df,[Channel_v; zeros(D,1)]);
-Channel_filt_v = Channel_filt_v(D+1:end);  
-
-figure
-plot(t_e,Channel_e,t_e,Channel_filt_e,'r','linewidth',1.5);
-title('Filtered Waveforms Estimation Data');
-xlabel('Time (s)')
-legend('Original Noisy Signal','Filtered Signal');
-grid on
-axis tight
-
-figure
-plot(t_v,Channel_v,t_v,Channel_filt_v,'r','linewidth',1.5);
-title('Filtered Waveforms Validation Data');
-xlabel('Time (s)')
-legend('Original Noisy Signal','Filtered Signal');
-grid on
-axis tight
-
-
-%------------ Smoothing Data over One Rotation ------------%
-
-One_rotation = floor(Fs/r_speed);  % We use a window equal to how many samples we have for one full
-                                   % rotation of the turbine
-
-coeffOneRotation = ones(1, One_rotation)/One_rotation;
-
-avgOneRotation_e = filter(coeffOneRotation, 1, Channel_filt_e);
-avgOneRotation_v = filter(coeffOneRotation, 1, Channel_filt_v);
-fDelay = (length(coeffOneRotation )-1)/2;   % Any symmetric filter of length N will have a delay of (N-1)/2 samples.
-  
-
-figure
-plot(t_e,Channel_filt_e,t_e-Ts*fDelay,avgOneRotation_e,'linewidth',1.5);
-title('Smoothed Waveforms Over One Rotation Estimation Data');
-xlabel('Time (s)')
-legend('Input Channel','Smoothed Signal');
-grid on
-axis tight
-
-figure
-plot(t_v,Channel_filt_v,t_v-Ts*fDelay,avgOneRotation_v,'linewidth',1.5);
-title('Smoothed Waveforms Over One Rotation Validation Data');
-xlabel('Time (s)')
-legend('Input Channel','Smoothed Signal');
-grid on
-axis tight
-
-%% Preparation of Data for system identification
-% 
-z_e = iddata(avgOneRotation_e(20000:end-20000),u_e(20000:end-20000),Ts);
-z_v = iddata(avgOneRotation_v(20000:end-20000),u_v(20000:end-20000),Ts);
-
-z_e.InputName = 'Beta Angle';
-z_e.InputUnit = 'Degrees';
-z_e.OutputName = 'Flapwise Root Bending Moment';
-z_e.OutputUnit = 'Nm';
-z_e.TimeUnit = 'Seconds';
-
-z_v.InputName = 'Beta Angle';
-z_v.InputUnit = 'Degrees';
-z_v.OutputName = 'Flapwise Root Bending Moment';
-z_v.OutputUnit = 'Nm';
-z_v.TimeUnit = 'Seconds';
+  [Data_d10] = filtering_d10(DATA_d10, Fs, r_speed);
 
 
 
 
-figure
-plot(z_e)
-
-figure
-plot(z_v)
-
-% 
-% 
-z_e = detrend(z_e);
-
-z_v = detrend(z_v);
-% 
 %% Delay estimation
 % 
-tf1 = tfest(z_e,1,0,nan)
-resid(tf1,z_e)
+  d = merge(Validation_Data_d5(4).iddata,Validation_Data_d5(2).iddata,Estimation_Data_d5(1).iddata,Estimation_Data_d5(3).iddata);
+  
+  d2 = merge(Estimation_Data_d5(4).iddata,Estimation_Data_d5(2).iddata,Validation_Data_d5(1).iddata,Validation_Data_d5(3).iddata); 
+  
+  v = Data_d10(4).iddata;
+  v2 = Data_d10(2).iddata;
+  
+  
+%% System identification
 
- 
-figure
-plot(t_v,Channel_filt_v,'r','linewidth',1.5);
-title('Filtered Waveforms Validation Data');
-xlabel('Time (s)')
-legend('Original Noisy Signal','Filtered Signal');
-grid on
-axis tight
-
-
-
-
-
+% Tranfer Function models
+% 
+% model = tfest(d2,1,0);
+% model2 = tfest(d2,2,1);
 
 
+% ARMAX MODELS
+opt = armaxOptions;
+opt.Regularization.Lambda = 1;
+m = armax(d,[2 2 2 1],opt);
+
+opt1 = armaxOptions('Focus','simulation');
+m1 = armax(d,[2 2 2 1],opt1);
+m2 = armax(d2,[2 2 2 1],opt1);
+
+opt2 = armaxOptions;
+opt2.Focus = 'simulation';
+opt2.SearchMethod = 'lm';
+opt2.SearchOption.MaxIter = 10;
+opt2.Display = 'on';
+sys = armax(d,[2 2 2 1],opt2);
+sys2 = armax(d2,[2 2 2 1],opt2);
 
 
+% compare(v,m,m1,sys)
+% compare(v2,m2,sys2)
 
+z = iddata(DATA_d5(7).crio_databendflapblade3DMS02.Data *   -8.212171639296294e+05 + -1.973389124055448e+02,DATA_d5(7).crio_dataservo1setpointAI313.Data * -0.068965517241379 + 98.965517241379300, Ts);
+z = detrend(z);
+plot(z)
+
+
+compare(z,model,model2,m2,sys2)
