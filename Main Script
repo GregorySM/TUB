@@ -81,18 +81,18 @@ r_speed = 3;    % Rotational speed of the turbine in Hz
 %% Filtering Data
 
 
-  [Estimation_Data_d5, Validation_Data_d5] = filtering(DATA_d5, Fs, r_speed);
+  [Data_d5] = greg_filter(DATA_d5, Fs, r_speed);
 
-  [Data_d10] = filtering_d10(DATA_d10, Fs, r_speed);
+  [Data_d10] = greg_filter(DATA_d10, Fs, r_speed);
 
 
 
 
 %% Delay estimation
 % 
-  d = merge(Validation_Data_d5(4).iddata,Validation_Data_d5(2).iddata,Estimation_Data_d5(1).iddata,Estimation_Data_d5(3).iddata);
+  dplus = merge(Data_d5(8).iddata,Data_d5(6).iddata,Data_d5(1).iddata,Data_d5(3).iddata);
   
-  d2 = merge(Estimation_Data_d5(4).iddata,Estimation_Data_d5(2).iddata,Validation_Data_d5(1).iddata,Validation_Data_d5(3).iddata); 
+  dminus = merge(Data_d5(4).iddata,Data_d5(2).iddata,Data_d5(5).iddata,Data_d5(7).iddata); 
   
   v = Data_d10(4).iddata;
   v2 = Data_d10(2).iddata;
@@ -102,34 +102,53 @@ r_speed = 3;    % Rotational speed of the turbine in Hz
 
 % Tranfer Function models
 % 
-% model = tfest(d2,1,0);
-% model2 = tfest(d2,2,1);
+model = tfest(dminus,1,0);
+model2 = tfest(dminus,2,1);
 
 
 % ARMAX MODELS
+
+% Armax model estimation with default settings
 opt = armaxOptions;
 opt.Regularization.Lambda = 1;
-m = armax(d,[2 2 2 1],opt);
+opt.Display = 'off';
+ml_plus = armax(dplus,[2 2 2 1],opt);
+ml_minus = armax(dminus,[2 2 2 1],opt);
 
+% Armax model estimation with focus on simulation and auto method selection
 opt1 = armaxOptions('Focus','simulation');
-m1 = armax(d,[2 2 2 1],opt1);
-m2 = armax(d2,[2 2 2 1],opt1);
+opt1.Display = 'off';
+m_plus_sim = armax(dplus,[2 2 2 1],opt1);
+m_minus_sim = armax(dminus,[2 2 2 1],opt1);
 
+
+% Armax model estimation with focus on simulation and method Levenberg-Marquardt
 opt2 = armaxOptions;
 opt2.Focus = 'simulation';
 opt2.SearchMethod = 'lm';
 opt2.SearchOption.MaxIter = 10;
-opt2.Display = 'on';
-sys = armax(d,[2 2 2 1],opt2);
-sys2 = armax(d2,[2 2 2 1],opt2);
+opt2.Display = 'off';
+sys_plus = armax(dplus,[2 2 2 1],opt2);
+sys_minus = armax(dminus,[2 2 2 1],opt2);
 
+% Negative change Validation
+z_m = iddata(DATA_d10(2).crio_databendflapblade3DMS02.Data *   -8.212171639296294e+05 ...
++ -1.973389124055448e+02,DATA_d10(2).crio_dataservo1setpointAI313.Data * -0.068965517241379 ...
++ 98.965517241379300, Ts);
 
-% compare(v,m,m1,sys)
-% compare(v2,m2,sys2)
+% Negative change Validation
+z_p = iddata(DATA_d10(1).crio_databendflapblade3DMS02.Data *   -8.212171639296294e+05 ...
++ -1.973389124055448e+02,DATA_d10(1).crio_dataservo1setpointAI313.Data * -0.068965517241379 ...
++ 98.965517241379300, Ts);
 
-z = iddata(DATA_d5(7).crio_databendflapblade3DMS02.Data *   -8.212171639296294e+05 + -1.973389124055448e+02,DATA_d5(7).crio_dataservo1setpointAI313.Data * -0.068965517241379 + 98.965517241379300, Ts);
-z = detrend(z);
-plot(z)
+% Detrending Data
+z_m = detrend(z_m);
+z_p = detrend(z_p);
 
+%Comparison
+% compare(z_m,ml_plus,ml_minus,m_plus_sim,m_minus_sim,sys_plus,sys_minus)
+% figure
+% compare(z_p,ml_plus,ml_minus,m_plus_sim,m_minus_sim,sys_plus,sys_minus)
 
-compare(z,model,model2,m2,sys2)
+compare(z_m,sys_minus,model,model2)
+
