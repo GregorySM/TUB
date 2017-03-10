@@ -7,7 +7,7 @@ clc
 %% Inputing and converting the Data to .mat
 read_and_convert_tdms = 0; 
 load('dms_calib.mat')
-
+format long
 
 %% Delta 5
 folder  = './Delta5/';
@@ -104,6 +104,26 @@ r_speed = 3;    % Rotational speed of the turbine in Hz
   
 %% System identification
 
+%------------------------- Raw Validation Data -------------------------%
+
+
+% Negative change Validation
+z_m = iddata(DATA_d10(2).crio_databendflapblade3DMS02.Data *   -8.212171639296294e+05 ...
++ -1.973389124055448e+02,DATA_d10(2).crio_dataservo1setpointAI313.Data * -0.068965517241379 ...
++ 98.965517241379300, Ts);
+
+% Negative change Validation
+z_p = iddata(DATA_d10(1).crio_databendflapblade3DMS02.Data *   -8.212171639296294e+05 ...
++ -1.973389124055448e+02,DATA_d10(1).crio_dataservo1setpointAI313.Data * -0.068965517241379 ...
++ 98.965517241379300, Ts);
+
+% Detrending Data
+z_m = detrend(z_m);
+z_p = detrend(z_p);
+
+
+
+
 
 %------------------------- Model Estimation -------------------------%
 
@@ -111,6 +131,7 @@ r_speed = 3;    % Rotational speed of the turbine in Hz
 % 
 model = tfest(dminus,1,0); % 1st order transfer function estimation (1pole, no zeros)
 model2 = tfest(dminus,2,1);% 2nd order transfer function estimation (2pole, 1 zero)
+model3 = tfest(dminus,3,2);% 2nd order transfer function estimation (2pole, 1 zero)
 
 
 % ARMAX MODELS
@@ -141,24 +162,6 @@ sys_minus = armax(dminus,[2 2 2 1],opt2);
 
 
 
-%------------------------- Validation Data -------------------------%
-
-
-% Negative change Validation
-z_m = iddata(DATA_d10(2).crio_databendflapblade3DMS02.Data *   -8.212171639296294e+05 ...
-+ -1.973389124055448e+02,DATA_d10(2).crio_dataservo1setpointAI313.Data * -0.068965517241379 ...
-+ 98.965517241379300, Ts);
-
-% Negative change Validation
-z_p = iddata(DATA_d10(1).crio_databendflapblade3DMS02.Data *   -8.212171639296294e+05 ...
-+ -1.973389124055448e+02,DATA_d10(1).crio_dataservo1setpointAI313.Data * -0.068965517241379 ...
-+ 98.965517241379300, Ts);
-
-% Detrending Data
-z_m = detrend(z_m);
-z_p = detrend(z_p);
-
-
 
 %------------------------- Comparison -------------------------%
 
@@ -167,17 +170,4 @@ compare(z_m,ml_plus,ml_minus,m_plus_sim,m_minus_sim,sys_plus,sys_minus)
 figure
 compare(z_p,ml_plus,ml_minus,m_plus_sim,m_minus_sim,sys_plus,sys_minus)
 figure
-compare(z_p,sys_minus,model,model2)
-
-
-
-
-plot(DATA_d10(1).crio_dataservo1setpointAI313.Data)
-hold on
-plot(DATA_d10(1).crio_dataservopos1AI30.Data,'r')
-
-
-
-
-
-
+compare(Data_d10(2).iddata,sys_plus,model3)
