@@ -1,4 +1,3 @@
-
 function [Data] = greg_filter (DATA, Fs, r_speed,p)
 Ts = 1/Fs;
 
@@ -12,8 +11,6 @@ for i=1:size(DATA,2)
   Data(i).output = DATA(i).crio_databendflapblade3DMS02.Data *   -8.212171639296294e+05 + -1.973389124055448e+02;
   
   
-  Data(i).input = detrend(Data(i).input);
-  Data(i).output = detrend(Data(i).output);
 
    %% Filtering Data
 
@@ -42,14 +39,14 @@ Data(i).Filtered = Channel_filt(D+1:end);
 % plotting the results and comparing raw and filtered
 
 
-
-figure
-plot(t, Data(i).output,t,Data(i).Filtered,'r','linewidth',1.5);
-xlabel('Time (s)')
-legend('Original Noisy Signal','Filtered Signal');
-grid on
-axis tight
-title(['Filtered Waveforms Estimation Data Beta Change: ',p{i}]);
+% 
+% figure
+% plot(t, Data(i).output,t,Data(i).Filtered,'r','linewidth',1.5);
+% xlabel('Time (s)')
+% legend('Original Noisy Signal','Filtered Signal');
+% grid on
+% axis tight
+% title(['Filtered Waveforms Beta Change: ',p{i}]);
 
 %------------ Smoothing Data over One Rotation ------------%
 
@@ -72,19 +69,18 @@ fDelay = (length(coeffOneRotation )-1)/2;   % Any symmetric filter of length N w
 
 
 %%
-
-figure
-plot(t,Data(i).Filtered,t-Ts*fDelay,Data(i).avgOneRotation,'linewidth',1.5);
-title('Smoothed Waveforms Over One Rotation Estimation Data');
-xlabel('Time (s)')
-legend('Input Channel','Smoothed Signal');
-grid on
-axis tight
-
+% 
+% figure
+% plot(t,Data(i).Filtered,t-Ts*fDelay,Data(i).avgOneRotation,'linewidth',1.5);
+% xlabel('Time (s)')
+% legend('Input Channel','Smoothed Signal');
+% grid on
+% axis tight
+% title(['Smoothed Waveforms Over One Rotation Beta Change: ',p{i}]);
 
 
 Data(i).iddata = iddata( Data(i).avgOneRotation(4050:end),Data(i).input(4050:end),Ts);
-% Data(i).iddata = detrend(Data(i).iddata);
+Data(i).iddata = detrend(Data(i).iddata);
 
 
 end
