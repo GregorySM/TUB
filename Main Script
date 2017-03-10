@@ -17,7 +17,7 @@ if read_and_convert_tdms == 1
 else
     file_type = '*.mat';    
 end
-%Exp = {'Exp1' , 'Exp2', 'Exp3' , 'Exp4', 'Exp5'}; % Experiments number
+
 nameFiles = dir(strcat(folder,file_type));
 files_delta5 = {nameFiles.name}; 
 
@@ -31,9 +31,10 @@ for i=1:size(files_delta5,2)
     else
         DATA_d5(i) = load(file{i});   
     end
-    p = files_delta5{:,i}(13:end-4);
-    p =cellstr(p);  
+    p5{i} = files_delta5{:,i}(13:end-4);
 end
+p5 =cellstr(p5);  
+
 
 clc
 %% Delta 10 
@@ -61,10 +62,10 @@ for i=1:size(files_delta10,2)
     else
         DATA_d10(i) = load(file{i});   
     end
-    p = files_delta10{:,i}(13:end-4);
-    p =cellstr(p);  
+    p10{i} = files_delta10{:,i}(13:end-4);
+      
 end
-
+p10 =cellstr(p10);
 
 
 clc
@@ -78,32 +79,38 @@ r_speed = 3;    % Rotational speed of the turbine in Hz
 
  
  
-%% Filtering Data
+%% Filtering Data & Preparing Data
 
 
-  [Data_d5] = greg_filter(DATA_d5, Fs, r_speed);
+  [Data_d5] = greg_filter(DATA_d5, Fs, r_speed,p5);
 
-  [Data_d10] = greg_filter(DATA_d10, Fs, r_speed);
+  [Data_d10] = greg_filter(DATA_d10, Fs, r_speed,p10);
 
 
 
 
 %% Delay estimation
-% 
+
+
+% Experiments for estimation
+
+
   dplus = merge(Data_d5(8).iddata,Data_d5(6).iddata,Data_d5(1).iddata,Data_d5(3).iddata);
   
   dminus = merge(Data_d5(4).iddata,Data_d5(2).iddata,Data_d5(5).iddata,Data_d5(7).iddata); 
   
-  v = Data_d10(4).iddata;
-  v2 = Data_d10(2).iddata;
+
   
   
 %% System identification
 
+
+%------------------------- Model Estimation -------------------------%
+
 % Tranfer Function models
 % 
-model = tfest(dminus,1,0);
-model2 = tfest(dminus,2,1);
+model = tfest(dminus,1,0); % 1st order transfer function estimation (1pole, no zeros)
+model2 = tfest(dminus,2,1);% 2nd order transfer function estimation (2pole, 1 zero)
 
 
 % ARMAX MODELS
@@ -131,6 +138,12 @@ opt2.Display = 'off';
 sys_plus = armax(dplus,[2 2 2 1],opt2);
 sys_minus = armax(dminus,[2 2 2 1],opt2);
 
+
+
+
+%------------------------- Validation Data -------------------------%
+
+
 % Negative change Validation
 z_m = iddata(DATA_d10(2).crio_databendflapblade3DMS02.Data *   -8.212171639296294e+05 ...
 + -1.973389124055448e+02,DATA_d10(2).crio_dataservo1setpointAI313.Data * -0.068965517241379 ...
@@ -145,10 +158,26 @@ z_p = iddata(DATA_d10(1).crio_databendflapblade3DMS02.Data *   -8.21217163929629
 z_m = detrend(z_m);
 z_p = detrend(z_p);
 
-%Comparison
-% compare(z_m,ml_plus,ml_minus,m_plus_sim,m_minus_sim,sys_plus,sys_minus)
-% figure
-% compare(z_p,ml_plus,ml_minus,m_plus_sim,m_minus_sim,sys_plus,sys_minus)
 
-compare(z_m,sys_minus,model,model2)
+
+%------------------------- Comparison -------------------------%
+
+
+compare(z_m,ml_plus,ml_minus,m_plus_sim,m_minus_sim,sys_plus,sys_minus)
+figure
+compare(z_p,ml_plus,ml_minus,m_plus_sim,m_minus_sim,sys_plus,sys_minus)
+figure
+compare(z_p,sys_minus,model,model2)
+
+
+
+
+plot(DATA_d10(1).crio_dataservo1setpointAI313.Data)
+hold on
+plot(DATA_d10(1).crio_dataservopos1AI30.Data,'r')
+
+
+
+
+
 
