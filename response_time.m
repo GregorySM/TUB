@@ -30,9 +30,9 @@ Change_d2.setpoint = Change_d2.setpoint(triggerp(1):end);
 N = length(Change_d2.setpoint);
 t = (0:N-1)/Fs;
 
-Change_d2.beta.servo1 = filtfilt(b1,a1,Data_d2(2).crio_dataservopos1AI30.Data(triggerp(1):end) * servos.acp1.m + servos.acp1.n);
-Change_d2.beta.servo2 = filtfilt(b1,a1,Data_d2(2).crio_dataservopos2AI31.Data(triggerp(1):end) * servos.acp2.m + servos.acp2.n);
-Change_d2.beta.servo3 = filtfilt(b1,a1,Data_d2(2).crio_dataservopos3AI32.Data(triggerp(1):end) * servos.acp3.m + servos.acp3.n);
+Change_d2.beta.servo1 = filter(b1,a1,Data_d2(2).crio_dataservopos1AI30.Data(triggerp(1):end) * servos.acp1.m + servos.acp1.n);
+Change_d2.beta.servo2 = filter(b1,a1,Data_d2(2).crio_dataservopos2AI31.Data(triggerp(1):end) * servos.acp2.m + servos.acp2.n);
+Change_d2.beta.servo3 = filter(b1,a1,Data_d2(2).crio_dataservopos3AI32.Data(triggerp(1):end) * servos.acp3.m + servos.acp3.n);
 Change_d2.moment = filtfilt(b2,a2,Data_d2(2).crio_databendflapblade3DMS02.Data(triggerp(1):end)) *   -8.212171639296294e+05 + -1.973389124055448e+02;
 
 
@@ -54,6 +54,7 @@ plot(t,Change_d2.beta.servo1)
 plot([one_rotation one_rotation],[0 3],'k--')
 plot([0 3],[2 2],'k--')
 xlim([0 2])
+ylim([0 5])
 ylabel('Servo 1 Response [°]')
 hold off
 
@@ -63,6 +64,7 @@ plot(t,Change_d2.beta.servo2)
 plot([0.33 0.33],[0 2],'k--')
 plot([0 3],[2 2],'k--')
 xlim([0 2])
+ylim([0 5])
 ylabel('Servo 2 Response [°]')
 hold off
 
@@ -72,6 +74,7 @@ plot(t,Change_d2.beta.servo3)
 plot([0.33 0.33],[0 3],'k--')
 plot([0 3],[2 2],'k--')
 xlim([0 2])
+ylim([0 5])
 ylabel('Servo 3 Response [°]')
 hold off
 
@@ -80,7 +83,7 @@ hold on
 plot(t,Change_d2.moment)
 plot([0.33 0.33],[0 50],'k--')
 xlim([0 2])
-ylim([35 45])
+ylim([40 50])
 ylabel('BRBM [Nm]')
 xlabel('time [s]')
 hold off
@@ -98,9 +101,9 @@ Change_d5.setpoint = Change_d5.setpoint(triggerp(1):end);
 N = length(Change_d5.setpoint);
 t = (0:N-1)/Fs;
 
-Change_d5.beta.servo1 = filtfilt(b1,a1,Data_d5(1).crio_dataservopos1AI30.Data(triggerp(1):end) * servos.acp1.m + servos.acp1.n);
-Change_d5.beta.servo2 = filtfilt(b1,a1,Data_d5(1).crio_dataservopos2AI31.Data(triggerp(1):end) * servos.acp2.m + servos.acp2.n);
-Change_d5.beta.servo3 = filtfilt(b1,a1,Data_d5(1).crio_dataservopos3AI32.Data(triggerp(1):end) * servos.acp3.m + servos.acp3.n);
+Change_d5.beta.servo1 = filter(b1,a1,Data_d5(1).crio_dataservopos1AI30.Data(triggerp(1):end) * servos.acp1.m + servos.acp1.n);
+Change_d5.beta.servo2 = filter(b1,a1,Data_d5(1).crio_dataservopos2AI31.Data(triggerp(1):end) * servos.acp2.m + servos.acp2.n);
+Change_d5.beta.servo3 = filter(b1,a1,Data_d5(1).crio_dataservopos3AI32.Data(triggerp(1):end) * servos.acp3.m + servos.acp3.n);
 Change_d5.moment = filtfilt(b2,a2,Data_d5(1).crio_databendflapblade3DMS02.Data(triggerp(1):end)) *   -8.212171639296294e+05 + -1.973389124055448e+02;
 
 % Plotting
@@ -121,6 +124,7 @@ plot(t,Change_d5.beta.servo1)
 plot([0.33 0.33],[0 10],'k--')
 plot([0 3],[5 5],'k--')
 xlim([0 2])
+ylim([0 8])
 ylabel('Servo 1 Response [°]')
 hold off
 
@@ -130,6 +134,7 @@ plot(t,Change_d5.beta.servo2)
 plot([0.33 0.33],[0 10],'k--')
 plot([0 3],[5 5],'k--')
 xlim([0 2])
+ylim([0 8])
 ylabel('Servo 2 Response [°]')
 hold off
 
@@ -139,6 +144,7 @@ plot(t,Change_d5.beta.servo3)
 plot([0.33 0.33],[0 10],'k--')
 plot([0 3],[5 5],'k--')
 xlim([0 2])
+ylim([0 8])
 ylabel('Servo 3 Response [°]')
 hold off
 
@@ -147,7 +153,7 @@ hold on
 plot(t,Change_d5.moment)
 plot([0.33 0.33],[0 50],'k--')
 xlim([0 2])
-ylim([35 45])
+ylim([40 50])
 ylabel('BRBM [Nm]')
 xlabel('time [s]')
 hold off
@@ -164,9 +170,9 @@ Change_d10.setpoint = Change_d10.setpoint(triggerp(1):end);
 N = length(Change_d10.setpoint);
 t = (0:N-1)/Fs;
 
-Change_d10.beta.servo1 = filtfilt(b1,a1,Data_d10(1).crio_dataservopos1AI30.Data(triggerp(1):end) * servos.acp1.m + servos.acp1.n);
-Change_d10.beta.servo2 = filtfilt(b1,a1,Data_d10(1).crio_dataservopos2AI31.Data(triggerp(1):end) * servos.acp2.m + servos.acp2.n);
-Change_d10.beta.servo3 = filtfilt(b1,a1,Data_d10(1).crio_dataservopos3AI32.Data(triggerp(1):end) * servos.acp3.m + servos.acp3.n);
+Change_d10.beta.servo1 = filter(b1,a1,Data_d10(1).crio_dataservopos1AI30.Data(triggerp(1):end) * servos.acp1.m + servos.acp1.n);
+Change_d10.beta.servo2 = filter(b1,a1,Data_d10(1).crio_dataservopos2AI31.Data(triggerp(1):end) * servos.acp2.m + servos.acp2.n);
+Change_d10.beta.servo3 = filter(b1,a1,Data_d10(1).crio_dataservopos3AI32.Data(triggerp(1):end) * servos.acp3.m + servos.acp3.n);
 Change_d10.moment = filtfilt(b2,a2,Data_d10(1).crio_databendflapblade3DMS02.Data(triggerp(1):end)) *   -8.212171639296294e+05 + -1.973389124055448e+02;
 
 % Plotting
@@ -178,6 +184,7 @@ plot(t,Change_d10.setpoint)
 plot([0.33 0.33],[0 15],'k--')
 plot([0 3],[10 10],'k--')
 xlim([0 2])
+ylim([0 13])
 ylabel('Setpoint [°]')
 hold off
 
@@ -187,6 +194,7 @@ plot(t,Change_d10.beta.servo1)
 plot([0.33 0.33],[0 15],'k--')
 plot([0 3],[10 10],'k--')
 xlim([0 2])
+ylim([0 13])
 ylabel('Servo 1 Response [°]')
 hold off
 
@@ -196,6 +204,7 @@ plot(t,Change_d10.beta.servo2)
 plot([0.33 0.33],[0 15],'k--')
 plot([0 3],[10 10],'k--')
 xlim([0 2])
+ylim([0 13])
 ylabel('Servo 2 Response [°]')
 hold off
 
@@ -205,6 +214,7 @@ plot(t,Change_d10.beta.servo3)
 plot([0.33 0.33],[0 15],'k--')
 plot([0 3],[10 10],'k--')
 xlim([0 2])
+ylim([0 13])
 ylabel('Servo 3 Response [°]')
 hold off
 
