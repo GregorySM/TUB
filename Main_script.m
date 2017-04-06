@@ -1,4 +1,3 @@
-
 %% Initialization
 
 close all
@@ -26,18 +25,23 @@ Ts = 1/Fs;      % Sampling period [s]
 
 r_speed = 3;    % Motor Rotational speed [Hz]
 
+P = [3 6 8 12]; % 1p 2p 3p 4p
 % Curves
 
 flag_BRBM_Beta_Curve = 0;   % Blade Root Bending Moment Against Flap angle
-flag_response_time_curves = 1;  % Servos and BRBM Step Response
+flag_response_time_curves = 0;  % Servos and BRBM Step Response
 
 % Import Data 
-
+Import_data_Wind = 1;
 Import_data_d1 = 0;
-Import_data_d2 = 1;
+Import_data_d2 = 0;
 Import_data_d5 = 1;
-Import_data_d10 = 1;
+Import_data_d10 = 0;
 Import_data_sinus = 0;
+
+%
+Model_estimation = 0;
+
 
 %% Delta 1
 if Import_data_d1 == 1
@@ -156,28 +160,61 @@ if Import_data_sinus == 1
 
     clc
 end
+%% Wind_Velocity_Step
+if Import_data_Wind == 1
+    folder  = './Wind_Velocity_Step/';
+
+    nameFiles = dir(strcat(folder,file_type));
+    files_Wind = {nameFiles.name}; 
+
+
+    for i=1:size(files_Wind,2)
+    
+        file{i} = strcat(folder,files_Wind{:,i});   
+        if read_and_convert_tdms == 1
+            matFileName=simpleConvertTDMS(file{i});  
+            DATA_Wind(i) = load(cell2mat(matFileName));
+        else
+        
+            DATA_Wind(i) = check_channelnaming(load(file{i}));
+        end
+%         pWind{i} = files_Wind{:,i}(13:end-4);
+      end
+%     pWind =cellstr(pWind);
+
+
+    clc
+end
+
+
+
+
+
 %% Blade Root Bending againts Flap position curve
 
 if flag_BRBM_Beta_Curve == 1
+    
     BM_beta_curves(DATA_d1)
+    
 end
 
-%%
+%% Servo-motors and Blade Root Bending Moment Step responses
 
-if flag_response_time_curves == 1   
+if flag_response_time_curves == 1
+    
     response_time(DATA_d2,DATA_d5,DATA_d10,Fs,1,r_speed)
+
 end
 
 
-%% Filtering Data & Preparing Data
+%% Filtering Data & Preparing Data for 
 
 
-[Data_d5] = filtpass(DATA_d5, Fs, 1);
+[Data_d1] = notchfilter(DATA_d1,P,Fs,10);
 
-[Data_d2] = filtpass(DATA_d2, Fs, 0.5);
+[Data_d2] = notchfilter(DATA_d2,P,Fs,10);
 
-[Data_d1] = filtpass(DATA_d1, Fs, 1);
-
+[Data_d5] = notchfilter(DATA_d5,P,Fs,10);
 
 %% Delay estimation
 
@@ -186,38 +223,13 @@ end
 
 
   d1 = merge(Data_d1(:).iddata);
-%   d2 = merge(Data_d2(:).iddata);
-%   d5 = merge(Data_d5(:).iddata); 
-% %   dminus = merge(Data_d5(4).iddata,Data_d5(2).iddata,Data_d5(5).iddata,Data_d5(7).iddata); 
-  
-% d1_plus = merge(Data_d1(21).iddata,Data_d1(3).iddata,Data_d1(5).iddata,Data_d1(7).iddata,Data_d1(9).iddata,...
-%     Data_d1(11).iddata,Data_d1(13).iddata,Data_d1(15).iddata,Data_d1(17).iddata,Data_d1(19).iddata,...
-%     Data_d1(22).iddata,Data_d1(24).iddata,Data_d1(26).iddata,Data_d1(28).iddata,Data_d1(30).iddata,...
-%      Data_d1(32).iddata,Data_d1(34).iddata,Data_d1(36).iddata,Data_d1(38).iddata,Data_d1(40).iddata);
 
   
   
+
 %% System identification
 
-%------------------------- Raw Validation Data -------------------------%
-
-
-% % Negative change Validation
-% z_m = iddata(DATA_d5(2).crio_databendflapblade3DMS02.Data *   -8.212171639296294e+05 ...
-% + -1.973389124055448e+02,DATA_d5(2).crio_dataservo1setpointAI313.Data * -0.068965517241379 ...
-% + 98.965517241379300, Ts);
-% 
-% % Negative change Validation
-% z_p = iddata(DATA_d5(1).crio_databendflapblade3DMS02.Data *   -8.212171639296294e+05 ...
-% + -1.973389124055448e+02,DATA_d5(1).crio_dataservo1setpointAI313.Data * -0.068965517241379 ...
-% + 98.965517241379300, Ts);
-% 
-% % Detrending Data
-% z_m = detrend(z_m);
-% z_p = detrend(z_p);
-
-
-
+if Model_estimation == 1
 
 
 %------------------------- Model Estimation -------------------------%
@@ -226,57 +238,34 @@ end
 % 
 
 model = tfest(d1,1,0); % 1st order transfer function estimation (1pole, no zeros)
+
+
 % model2 = tfest(d1,2,1);% 2nd order transfer function estimation (2pole, 1 zero)
-% model3 = tfest(d,3,2);% 2nd order transfer function estimation (2pole, 1 zero)
-% 
-% 
-% % ARMAX MODELS
-% 
-%Armax model estimation with default settings
-% opt = armaxOptions;
-% opt.Regularization.Lambda = 1;
-% opt.Display = 'off';
-% m_poly = armax(d1,[2 2 2 1],opt);
-% % ml_minus = armax(dminus,[2 2 2 1],opt);
-% % 
-% % Armax model estimation with focus on simulation and auto method selection
-% opt1 = armaxOptions('Focus','simulation');
-% opt1.Display = 'off';
-% m_polys = armax(d1,[2 2 2 1],opt1);
-% 
-% % % 
-% % 
-% % Armax model estimation with focus on simulation and method Levenberg-Marquardt
-% opt2 = armaxOptions;
-% opt2.Focus = 'simulation';
-% opt2.SearchMethod = 'lm';
-% opt2.SearchOption.MaxIter = 10;
-% opt2.Display = 'off';
-% m_polylm = armax(d1,[2 2 2 1],opt2);
-
-% 
-% 
-% 
-% 
-% 
-% %------------------------- Comparison -------------------------%
-% 
-% 
-% compare(z_m,ml_plus,ml_minus,m_plus_sim,m_minus_sim,sys_plus,sys_minus)
-% figure
-% compare(z_p,ml_plus,ml_minus,m_plus_sim,m_minus_sim,sys_plus,sys_minus)
-% for i=1:size(Data_d5,2)
-% figure
-% compare(Data_d5(i).iddata,model)
-% 
-% 
-% end
 
 
-%%
-% mo = tfest(Data_d5(4).iddata,2,1);
-% figure
-% plot(Data_d2(i).iddata)
-% 
-% 
-% compare(Data_d2(4).iddata,mo)
+% ARMAX MODELS
+
+% Armax model estimation with focus on simulation and method Levenberg-Marquardt
+opt2 = armaxOptions;
+opt2.Focus = 'simulation';
+opt2.SearchMethod = 'lm';
+opt2.SearchOption.MaxIter = 10;
+opt2.Display = 'off';
+m_polylm = armax(d1,[2 2 2 1],opt2);
+ 
+%------------------------- Comparison -------------------------%
+
+for i=1:size(Data_d2,2)
+    figure
+    compare(Data_d2(i).iddata,model,polys)
+end
+
+%------------------------- Control Design -------------------------%
+[C2,info] = pidtune(model,'PI',opt);
+opt = pidtuneOptions('DesignFocus','disturbance-rejection');
+
+Cp = pidtune(m_polylm,'PI');
+
+pidtune(m_polylm,C)
+
+end
