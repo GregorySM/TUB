@@ -1,4 +1,3 @@
-
 %% Initialization
 
 close all
@@ -6,262 +5,356 @@ clear
 clc
 
 %% Inputing and converting the Data to .mat
+cd 'C:\Users\Greg\Documents\TU Berlin\System Identification'
+
 read_and_convert_tdms = 0; 
-load('dms_calib.mat')
+BRBM_callib = load('dms_calib.mat');
 format long
 
-%% Delta 5
-folder  = './Delta5/';
 
 if read_and_convert_tdms == 1
     file_type = '*.tdms';
 else
     file_type = '*.mat';    
 end
-
-nameFiles = dir(strcat(folder,file_type));
-files_delta5 = {nameFiles.name}; 
-
-
-for i=1:size(files_delta5,2)
-    
-    file{i} = strcat(folder,files_delta5{:,i});   
-    if read_and_convert_tdms == 1;
-        matFileName=simpleConvertTDMS(file{i});  
-        DATA_d5(i) = load(cell2mat(matFileName));
-    else
-        DATA_d5(i) = load(file{i});
-    end
-    p5{i} = files_delta5{:,i}(13:end-4);
-end
-p5 =cellstr(p5);  
-
-clc
-%% Delta 1
-
-
-folder  = './Delta1/';
-
-if read_and_convert_tdms == 1
-    file_type = '*.tdms';
-else
-    file_type = '*.mat';    
-end
-nameFiles = dir(strcat(folder,file_type));
-files_delta1 = {nameFiles.name}; 
-
-
-
-
-for i=1:size(files_delta1,2)
-    
-    file{i} = strcat(folder,files_delta1{:,i});   
-    if read_and_convert_tdms == 1
-        matFileName=simpleConvertTDMS(file{i});  
-        DATA_d1(i) = load(cell2mat(matFileName));
-    else
-        %A = load(file{i});
-        DATA_d1(i) = load(file{i}); %check_channelnaming(A);
-    end
-    p1{i} = files_delta1{:,i}(13:end-4);
-      
-end
-p1 =cellstr(p1);
-
-
-clc
-%% Delta 2
-
-
-folder  = './Delta2/';
-
-if read_and_convert_tdms == 1
-    file_type = '*.tdms';
-else
-    file_type = '*.mat';    
-end
-nameFiles = dir(strcat(folder,file_type));
-files_delta2 = {nameFiles.name}; 
-
-
-
-
-for i=1:size(files_delta2,2)
-    
-    file{i} = strcat(folder,files_delta2{:,i});   
-    if read_and_convert_tdms == 1
-        matFileName=simpleConvertTDMS(file{i});  
-        DATA_d2(i) = load(cell2mat(matFileName));
-    else
-        A = load(file{i});
-        DATA_d2(i) = check_channelnaming(A);
-    end
-    p2{i} = files_delta2{:,i}(13:end-4);
-      
-end
-p2 =cellstr(p2);
-
-
-clc
-%% Sinus
-
-
-folder  = './Sinus/';
-
-if read_and_convert_tdms == 1
-    file_type = '*.tdms';
-else
-    file_type = '*.mat';    
-end
-nameFiles = dir(strcat(folder,file_type));
-files_Sinus = {nameFiles.name}; 
-
-
-
-
-for i=1:size(files_Sinus,2)
-    
-    file{i} = strcat(folder,files_Sinus{:,i});   
-    if read_and_convert_tdms == 1
-        matFileName=simpleConvertTDMS(file{i});  
-        DATA_Sinus(i) = load(cell2mat(matFileName));
-    else
-        
-        DATA_Sinus(i) = load(file{i});
-    end
-    pSinus{i} = files_Sinus{:,i}(13:end-4);
-      
-end
-pSinus =cellstr(pSinus);
-
-
-clc
 %% Constants
 
 Fs = 10^4;      % Sampling frequency 10 KHz
 
-Ts = 1/Fs;      % Sampling period
+Ts = 1/Fs;      % Sampling period [s]
 
-r_speed = 3;    % Rotational speed of the turbine in Hz
+r_speed = 3;    % Motor Rotational speed [Hz]
 
-flag_BRBM_Beta_Curve = 1;
+P = [3 6 8 12]; % 1p 2p 3p 4p
+% Curves
 
-%%
+flag_BRBM_Beta_Curve = 0;   % Blade Root Bending Moment Against Flap angle
+flag_response_time_curves = 0;  % Servos and BRBM Step Response
 
-BM_beta_curves(DATA_d1,Fs,files_delta1,flag_BRBM_Beta_Curve)
- 
+% Import Data 
+Import_data_Wind = 0;
+Import_data_d1 = 0;
+Import_data_d2 = 0;
+Import_data_d5 = 0;
+Import_data_d10 = 0;
+Import_data_sinus = 0;
+Import_data_continuous = 1;
+%
+Model_estimation = 1;
 
 
-%% Filtering Data & Preparing Data
+%% Delta 1
+if Import_data_d1 == 1
+folder  = './Delta1/';
+nameFiles = dir(strcat(folder,file_type));
+files_delta1 = {nameFiles.name}; 
+
+for i=1:size(files_delta1,2)
+    
+        file{i} = strcat(folder,files_delta1{:,i});   
+        if read_and_convert_tdms == 1
+            matFileName=simpleConvertTDMS(file{i});  
+            DATA_d1(i) = load(cell2mat(matFileName));
+        else
+            DATA_d1(i) = check_channelnaming(load(file{i}));
+        end
+        p1{i} = files_delta1{:,i}(13:end-4);
+      
+    end
+    p1 =cellstr(p1);
 
 
-  [Data_d5] = greg_filter(DATA_d5, Fs, r_speed,p5,1,2);
+    clc
+end
+%% Delta 2
+if Import_data_d2 == 1
+    folder  = './Delta2/';
 
-  [Data_d2] = greg_filter(DATA_d2, Fs, r_speed,p2,3,4);
+    nameFiles = dir(strcat(folder,file_type));
+    files_delta2 = {nameFiles.name}; 
 
-  [Data_d1] = greg_filter(DATA_d1, Fs, r_speed,p1,5,6);
+    for i=1:size(files_delta2,2)
+    
+        file{i} = strcat(folder,files_delta2{:,i});   
+        if read_and_convert_tdms == 1
+            matFileName=simpleConvertTDMS(file{i});  
+            DATA_d2(i) = load(cell2mat(matFileName));
+        else
+            DATA_d2(i) = check_channelnaming(load(file{i}));
+        end
+        p2{i} = files_delta2{:,i}(13:end-4);
+      
+    end
+    p2 =cellstr(p2);
 
 
+    clc
+end
+%% Delta 5
+if Import_data_d5 == 1
+    folder  = './Delta5/';
+    nameFiles = dir(strcat(folder,file_type));
+    files_delta5 = {nameFiles.name}; 
+
+    for i=1:size(files_delta5,2)
+    
+        file{i} = strcat(folder,files_delta5{:,i});   
+        if read_and_convert_tdms == 1;
+            matFileName=simpleConvertTDMS(file{i});  
+            DATA_d5(i) = load(cell2mat(matFileName));
+        else
+            DATA_d5(i) = load(file{i});
+        end
+        p5{i} = files_delta5{:,i}(13:end-4);
+    end
+    p5 =cellstr(p5);  
+
+    clc
+end
+%% Delta 10
+if Import_data_d10 == 1
+    folder  = './Delta10/';
+    nameFiles = dir(strcat(folder,file_type));
+    files_delta10 = {nameFiles.name}; 
+
+
+    for i=1:size(files_delta10,2)
+    
+        file{i} = strcat(folder,files_delta10{:,i});   
+        if read_and_convert_tdms == 1
+            matFileName=simpleConvertTDMS(file{i});  
+            DATA_d10(i) = load(cell2mat(matFileName));
+        else
+            DATA_d10(i) = load(file{i});
+        end
+        p10{i} = files_delta10{:,i}(13:end-4);
+      
+    end
+    p10 =cellstr(p10);
+
+
+    clc
+end
+%% Sinus
+if Import_data_sinus == 1
+    folder  = './Sinus/';
+
+    nameFiles = dir(strcat(folder,file_type));
+    files_Sinus = {nameFiles.name}; 
+
+
+    for i=1:size(files_Sinus,2)
+    
+        file{i} = strcat(folder,files_Sinus{:,i});   
+        if read_and_convert_tdms == 1
+            matFileName=simpleConvertTDMS(file{i});  
+            DATA_Sinus(i) = load(cell2mat(matFileName));
+        else
+        
+            DATA_Sinus(i) = load(file{i});
+        end
+        pSinus{i} = files_Sinus{:,i}(13:end-4);
+      end
+    pSinus =cellstr(pSinus);
+
+
+    clc
+end
+%% Wind_Velocity_Step
+if Import_data_Wind == 1
+    folder  = './Wind_Velocity_Step/';
+
+    nameFiles = dir(strcat(folder,file_type));
+    files_Wind = {nameFiles.name}; 
+
+
+    for i=1:size(files_Wind,2)
+    
+        file{i} = strcat(folder,files_Wind{:,i});   
+        if read_and_convert_tdms == 1
+            matFileName=simpleConvertTDMS(file{i});  
+            DATA_Wind(i) = check_channelnaming(load(file{i}));
+        else
+        
+            DATA_Wind(i) = check_channelnaming(load(file{i}));
+        end
+%         pWind{i} = files_Wind{:,i}(13:end-4);
+      end
+%     pWind =cellstr(pWind);
+
+
+    clc
+end
+
+
+%% Continuous Step
+if Import_data_continuous == 1
+    folder  = './Continuous/';
+
+    nameFiles = dir(strcat(folder,file_type));
+    files_Continuous = {nameFiles.name}; 
+
+
+    for i=1:size(files_Continuous,2)
+    
+        file{i} = strcat(folder,files_Continuous{:,i});   
+        if read_and_convert_tdms == 1
+            matFileName=simpleConvertTDMS(file{i});
+            A = load(cell2mat(matFileName)); 
+            DATA_Continuous(i) = check_channelnaming(A);
+        else
+        
+            DATA_Continuous(i) = check_channelnaming(load(file{i}));
+        end
+%         pWind{i} = files_Wind{:,i}(13:end-4);
+      end
+%     pWind =cellstr(pWind);
+
+
+    clc
+end
+
+%% Blade Root Bending againts Flap position curve
+
+if flag_BRBM_Beta_Curve == 1
+    
+    BM_beta_curves(DATA_d1)
+    
+end
+
+%% Servo-motors and Blade Root Bending Moment Step responses
+
+if flag_response_time_curves == 1
+    
+    response_time(DATA_d2,DATA_d5,DATA_d10,Fs,1,r_speed)
+
+end
+
+
+%% Filtering Data & Preparing Data for 
+[Data_Sinus] = notchfilter(DATA_Sinus,P,Fs,10,0);
+
+
+[Data_d1] = notchfilter(DATA_d1,P,Fs,10,0);
+
+[Data_d2] = notchfilter(DATA_d2,P,Fs,10,0);
+
+[Data_d5] = notchfilter(DATA_d5,P,Fs,10,0);
+
+[Data_d10] = notchfilter(DATA_d10,P,Fs,10,0);
+
+[Data_Wind] = notchfilter(DATA_Wind,P,Fs,10,0);
+
+[Data_C] = notchfilter(DATA_Continuous,P,Fs,10,0);
 %% Delay estimation
 
 
 % Experiments for estimation
 
-d1_plus = merge(Data_d1(21).iddata,Data_d1(3).iddata,Data_d1(5).iddata,Data_d1(7).iddata,Data_d1(9).iddata,...
-    Data_d1(11).iddata,Data_d1(13).iddata,Data_d1(15).iddata,Data_d1(17).iddata,Data_d1(19).iddata,...
-    Data_d1(22).iddata,Data_d1(24).iddata,Data_d1(26).iddata,Data_d1(28).iddata,Data_d1(30).iddata,...
-     Data_d1(32).iddata,Data_d1(34).iddata,Data_d1(36).iddata,Data_d1(38).iddata,Data_d1(40).iddata);
 
-%   d1 = merge(Data_d1(:).iddata);
-  d2 = merge(Data_d2(:).iddata);
-  d5 = merge(Data_d5(:).iddata); 
-%   dminus = merge(Data_d5(4).iddata,Data_d5(2).iddata,Data_d5(5).iddata,Data_d5(7).iddata); 
-  
+d1 = merge(Data_d5(:).iddata);
 
+
+d_Es = Data_C(2).iddata;
   
+d_Vs = Data_C(4).iddata;
+
+d_E = Data_C(1).iddata;
   
+d_V = Data_C(3).iddata;
+
 %% System identification
 
-%------------------------- Raw Validation Data -------------------------%
-
-
-% % Negative change Validation
-% z_m = iddata(DATA_d5(2).crio_databendflapblade3DMS02.Data *   -8.212171639296294e+05 ...
-% + -1.973389124055448e+02,DATA_d5(2).crio_dataservo1setpointAI313.Data * -0.068965517241379 ...
-% + 98.965517241379300, Ts);
+% % Wind Model
+% N = length(Data_Wind(2).filtered);
+% t = (0:N-1)/Fs;
 % 
-% % Negative change Validation
-% z_p = iddata(DATA_d5(1).crio_databendflapblade3DMS02.Data *   -8.212171639296294e+05 ...
-% + -1.973389124055448e+02,DATA_d5(1).crio_dataservo1setpointAI313.Data * -0.068965517241379 ...
-% + 98.965517241379300, Ts);
+% plot(t,Data_Wind(1).filtered - 36.4)
+% %
 % 
-% % Detrending Data
-% z_m = detrend(z_m);
-% z_p = detrend(z_p);
+% 
+% t1 = 15.7;
+% t2 = 19;
+% tau = 3/2 * (t2 - t1);
+% theta = t2 - tau;
+% 
+% s = tf('s');
+% Gp = exp(-15*s)/(1 + tau*s)
+% 
+% hold on; step(2*Gp,'r'),hold off;
+% close all
 
-
-
+if Model_estimation == 1
 
 
 %------------------------- Model Estimation -------------------------%
+% State space
 
-% Tranfer Function models
-% 
+    
+    opt = n4sidOptions('Focus','simulation','Display','on','N4weight','CVA');
+    
+    opt2 = n4sidOptions('Focus','simulation','Display','on','N4weight','MOESP');
+    ss = n4sid(d_C,4,opt);
+    ss2 = n4sid(d,4,opt2);
+    
+%     % Kalman
+%     
+%     [kalmf,L,~,M,Z] = kalman(model,2.3,1);
+    
+    %
+    
+    for i=1:size(Data_d5,2)
+        
+        compare(Data_d5(i).iddata,ss)
+    end
+%%
 
-model_plus = tfest(d1_plus,1,0); % 1st order transfer function estimation (1pole, no zeros)
-model2_plus = tfest(d1_plus,2,1);% 2nd order transfer function estimation (2pole, 1 zero)
-% model3 = tfest(d,3,2);% 2nd order transfer function estimation (2pole, 1 zero)
-% 
-% 
-% % ARMAX MODELS
-% 
-% Armax model estimation with default settings
-% opt = armaxOptions;
-% opt.Regularization.Lambda = 1;
-% opt.Display = 'off';
-% m_poly = armax(d,[2 2 2 1],opt);
-% % ml_minus = armax(dminus,[2 2 2 1],opt);
-% % 
-% % Armax model estimation with focus on simulation and auto method selection
-% opt1 = armaxOptions('Focus','simulation');
-% opt1.Display = 'off';
-% m_polys = armax(d,[2 2 2 1],opt1);
-% % m_minus_sim = armax(d,[2 2 2 1],opt1);
-% % 
-% 
+%------------ Tranfer Function models ------------%
+
+
+
+tfmodel_1o = tfest(d_Es,1,0);   % 1st order Transfer Function 
+
+tfmodel_2o = tfest(d_Es,2,1);   % 2nd order Transfer Function 
+
+%------------ ARMAX MODELS ------------%
+
 % Armax model estimation with focus on simulation and method Levenberg-Marquardt
 opt2 = armaxOptions;
 opt2.Focus = 'simulation';
 opt2.SearchMethod = 'lm';
 opt2.SearchOption.MaxIter = 10;
 opt2.Display = 'off';
-sys_plus = armax(d1_plus,[2 2 2 1],opt2);
-% sys_minus = armax(dminus,[2 2 2 1],opt2);
+m_polylm = armax(d1,[2 2 2 1],opt2);
+
+
+%------------------------- Neural Network ---------------------%
+
+% x = Data_d5(1).input(10000:end);
+% xd = detrend(x);
+% xtest = Data_d5(2).input(10000:end);
 % 
-% 
-% 
-% 
-% 
-% %------------------------- Comparison -------------------------%
-% 
-% 
-% compare(z_m,ml_plus,ml_minus,m_plus_sim,m_minus_sim,sys_plus,sys_minus)
-% figure
-% compare(z_p,ml_plus,ml_minus,m_plus_sim,m_minus_sim,sys_plus,sys_minus)
-for i=1:size(Data_d5,2)
-figure
-compare(Data_d2(i).iddata,model_plus,model2_plus,sys_plus)
+% y = Data_d5(1).filtered(10000:end);
+% yd = detrend(y);
+% ytest = Data_d5(2).filtered(10000:end);
+
+%------------------------- Comparison -------------------------%
+
+
+compare(d_Vs,tfmodel_2o,tf3)
+
+compare(d_V,tfmodel_2o,tf3)
+
+%------------------------- Control Design -------------------------%
+opt = pidtuneOptions('DesignFocus','balanced');
+opt1 = pidtuneOptions('DesignFocus','reference-tracking');
+opt2 = pidtuneOptions('DesignFocus','disturbance-rejection');
+
+[C_balanced,info1] = pidtune(tfmodel_2o,'PID',opt);
+[C_following,info2] = pidtune(tfmodel_2o,'PID',opt1);
+[C_reacting,info3] = pidtune(tfmodel_2o,'PID',opt2);
+
+
 
 
 end
-
-
-%%
-
-% mo = tfest(Data_d5(4).iddata,2,1);
-% figure
-% plot(Data_d2(i).iddata)
-% 
-% 
-% compare(Data_d2(4).iddata,mo)
-
