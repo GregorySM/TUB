@@ -5,7 +5,7 @@ clear
 clc
 
 %% Inputing and converting the Data to .mat
-cd 'C:\Users\Greg\Documents\TU Berlin\System Identification'
+%cd 'C:\Users\Greg\Documents\TU Berlin\System Identification'
 
 read_and_convert_tdms = 0; 
 BRBM_callib = load('dms_calib.mat');
@@ -341,7 +341,7 @@ m_polylm = armax(d1,[2 2 2 1],opt2);
 %------------------------- Comparison -------------------------%
 
 
-compare(d_Vs,tfmodel_2o,tf3)
+compare(d_E,TF_model,SS_model)
 
 compare(d_V,tfmodel_2o,tf3)
 
