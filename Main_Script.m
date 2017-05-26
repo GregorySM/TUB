@@ -45,11 +45,11 @@ Model_estimation = 1;
 
 %% Delta 1
 if Import_data_d1 == 1
-folder  = './Delta1/';
-nameFiles = dir(strcat(folder,file_type));
-files_delta1 = {nameFiles.name}; 
+    folder  = './Data/Delta1/';
+    nameFiles = dir(strcat(folder,file_type));
+    files_delta1 = {nameFiles.name}; 
 
-for i=1:size(files_delta1,2)
+    for i=1:size(files_delta1,2)
     
         file{i} = strcat(folder,files_delta1{:,i});   
         if read_and_convert_tdms == 1
@@ -68,7 +68,7 @@ for i=1:size(files_delta1,2)
 end
 %% Delta 2
 if Import_data_d2 == 1
-    folder  = './Delta2/';
+    folder  = './Data/Delta2/';
 
     nameFiles = dir(strcat(folder,file_type));
     files_delta2 = {nameFiles.name}; 
@@ -92,7 +92,7 @@ if Import_data_d2 == 1
 end
 %% Delta 5
 if Import_data_d5 == 1
-    folder  = './Delta5/';
+    folder  = './Data/Delta5/';
     nameFiles = dir(strcat(folder,file_type));
     files_delta5 = {nameFiles.name}; 
 
@@ -113,7 +113,7 @@ if Import_data_d5 == 1
 end
 %% Delta 10
 if Import_data_d10 == 1
-    folder  = './Delta10/';
+    folder  = './Data/Delta10/';
     nameFiles = dir(strcat(folder,file_type));
     files_delta10 = {nameFiles.name}; 
 
@@ -137,7 +137,7 @@ if Import_data_d10 == 1
 end
 %% Sinus
 if Import_data_sinus == 1
-    folder  = './Sinus/';
+    folder  = './Data/Sinus/';
 
     nameFiles = dir(strcat(folder,file_type));
     files_Sinus = {nameFiles.name}; 
@@ -154,7 +154,7 @@ if Import_data_sinus == 1
             DATA_Sinus(i) = load(file{i});
         end
         pSinus{i} = files_Sinus{:,i}(13:end-4);
-      end
+     end
     pSinus =cellstr(pSinus);
 
 
@@ -162,7 +162,7 @@ if Import_data_sinus == 1
 end
 %% Wind_Velocity_Step
 if Import_data_Wind == 1
-    folder  = './Wind_Velocity_Step/';
+    folder  = './Data/Wind_Velocity_Step/';
 
     nameFiles = dir(strcat(folder,file_type));
     files_Wind = {nameFiles.name}; 
@@ -179,7 +179,7 @@ if Import_data_Wind == 1
             DATA_Wind(i) = check_channelnaming(load(file{i}));
         end
 %         pWind{i} = files_Wind{:,i}(13:end-4);
-      end
+     end
 %     pWind =cellstr(pWind);
 
 
@@ -189,7 +189,7 @@ end
 
 %% Continuous Step
 if Import_data_continuous == 1
-    folder  = './Continuous/';
+    folder  = './Data/Continuous/';
 
     nameFiles = dir(strcat(folder,file_type));
     files_Continuous = {nameFiles.name}; 
@@ -231,30 +231,36 @@ if flag_response_time_curves == 1
 end
 
 
-%% Filtering Data & Preparing Data for 
-[Data_Sinus] = notchfilter(DATA_Sinus,P,Fs,10,0);
+%% Filtering Data & Preparing Data for System Identification
+if Import_data_sinus == 1
+    [Data_Sinus] = notchfilter(DATA_Sinus,P,Fs,10,0);
+end
 
+if Import_data_d1 == 1
+    [Data_d1] = notchfilter(DATA_d1,P,Fs,10,0);
+end
 
-[Data_d1] = notchfilter(DATA_d1,P,Fs,10,0);
+if Import_data_d2 == 1
+    [Data_d2] = notchfilter(DATA_d2,P,Fs,10,0);
+end
 
-[Data_d2] = notchfilter(DATA_d2,P,Fs,10,0);
+if Import_data_d5 == 1
+    [Data_d5] = notchfilter(DATA_d5,P,Fs,10,0);
+end
 
-[Data_d5] = notchfilter(DATA_d5,P,Fs,10,0);
+if Import_data_d10 == 1
+    [Data_d10] = notchfilter(DATA_d10,P,Fs,10,0);
+end
 
-[Data_d10] = notchfilter(DATA_d10,P,Fs,10,0);
+if Import_data_Wind == 1
+    [Data_Wind] = notchfilter(DATA_Wind,P,Fs,10,0);
+end
 
-[Data_Wind] = notchfilter(DATA_Wind,P,Fs,10,0);
-
-[Data_C] = notchfilter(DATA_Continuous,P,Fs,10,0);
+if Import_data_continuous == 1
+    [Data_C] = notchfilter(DATA_Continuous,P,Fs,10,0);
+end
 %% Delay estimation
-
-
 % Experiments for estimation
-
-
-d1 = merge(Data_d5(:).iddata);
-
-
 d_Es = Data_C(2).iddata;
   
 d_Vs = Data_C(4).iddata;
@@ -265,96 +271,66 @@ d_V = Data_C(3).iddata;
 
 %% System identification
 
-% % Wind Model
-% N = length(Data_Wind(2).filtered);
-% t = (0:N-1)/Fs;
-% 
-% plot(t,Data_Wind(1).filtered - 36.4)
-% %
-% 
-% 
-% t1 = 15.7;
-% t2 = 19;
-% tau = 3/2 * (t2 - t1);
-% theta = t2 - tau;
-% 
-% s = tf('s');
-% Gp = exp(-15*s)/(1 + tau*s)
-% 
-% hold on; step(2*Gp,'r'),hold off;
-% close all
+% Wind Model
+if Wind_Model_estimation == 1
+    N = length(Data_Wind(2).filtered);
+    t = (0:N-1)/Fs;
+    plot(t,Data_Wind(1).filtered - 36.4)
+    %
+    t1 = 15.7;
+    t2 = 19;
+    tau = 3/2 * (t2 - t1);
+    theta = t2 - tau;
 
-if Model_estimation == 1
+    s = tf('s');
+    Gp = exp(-15*s)/(1 + tau*s)
 
-
+    hold on; step(2*Gp,'r'),hold off;
+end
+% Smart blade Model
 %------------------------- Model Estimation -------------------------%
-% State space
-
-    
+if Model_estimation == 1
+    % State space
     opt = n4sidOptions('Focus','simulation','Display','on','N4weight','CVA');
-    
     opt2 = n4sidOptions('Focus','simulation','Display','on','N4weight','MOESP');
     ss = n4sid(d_C,4,opt);
     ss2 = n4sid(d,4,opt2);
     
-%     % Kalman
-%     
-%     [kalmf,L,~,M,Z] = kalman(model,2.3,1);
+    %------------ Tranfer Function models ------------%
+    tfmodel_1o = tfest(d_Es,1,0);   % 1st order Transfer Function 
+
+    tfmodel_2o = tfest(d_Es,2,1);   % 2nd order Transfer Function 
+
+    %------------ ARMAX MODELS ------------%
+    % Armax model estimation with focus on simulation and method Levenberg-Marquardt
+    opt2 = armaxOptions;
+    opt2.Focus = 'simulation';
+    opt2.SearchMethod = 'lm';
+    opt2.SearchOption.MaxIter = 10;
+    opt2.Display = 'off';
+    m_polylm = armax(d1,[2 2 2 1],opt2);
     
-    %
+    %------------------------- Neural Network ---------------------%
+
+    % x = Data_d5(1).input(10000:end);
+    % xd = detrend(x);
+    % xtest = Data_d5(2).input(10000:end);
+    % 
+    % y = Data_d5(1).filtered(10000:end);
+    % yd = detrend(y);
+    % ytest = Data_d5(2).filtered(10000:end);
+
+    %------------------------- Comparison -------------------------%
+    compare(d_E,TF_model,SS_model)
+
+    compare(d_V,tfmodel_2o,tf3)
     
-    for i=1:size(Data_d5,2)
-        
-        compare(Data_d5(i).iddata,ss)
-    end
-%%
+    %------------------------- Control Design -------------------------%
+    opt = pidtuneOptions('DesignFocus','balanced');
+    opt1 = pidtuneOptions('DesignFocus','reference-tracking');
+    opt2 = pidtuneOptions('DesignFocus','disturbance-rejection');
 
-%------------ Tranfer Function models ------------%
-
-
-
-tfmodel_1o = tfest(d_Es,1,0);   % 1st order Transfer Function 
-
-tfmodel_2o = tfest(d_Es,2,1);   % 2nd order Transfer Function 
-
-%------------ ARMAX MODELS ------------%
-
-% Armax model estimation with focus on simulation and method Levenberg-Marquardt
-opt2 = armaxOptions;
-opt2.Focus = 'simulation';
-opt2.SearchMethod = 'lm';
-opt2.SearchOption.MaxIter = 10;
-opt2.Display = 'off';
-m_polylm = armax(d1,[2 2 2 1],opt2);
-
-
-%------------------------- Neural Network ---------------------%
-
-% x = Data_d5(1).input(10000:end);
-% xd = detrend(x);
-% xtest = Data_d5(2).input(10000:end);
-% 
-% y = Data_d5(1).filtered(10000:end);
-% yd = detrend(y);
-% ytest = Data_d5(2).filtered(10000:end);
-
-%------------------------- Comparison -------------------------%
-
-
-compare(d_E,TF_model,SS_model)
-
-compare(d_V,tfmodel_2o,tf3)
-
-%------------------------- Control Design -------------------------%
-opt = pidtuneOptions('DesignFocus','balanced');
-opt1 = pidtuneOptions('DesignFocus','reference-tracking');
-opt2 = pidtuneOptions('DesignFocus','disturbance-rejection');
-
-[C_balanced,info1] = pidtune(tfmodel_2o,'PID',opt);
-[C_following,info2] = pidtune(tfmodel_2o,'PID',opt1);
-[C_reacting,info3] = pidtune(tfmodel_2o,'PID',opt2);
-
-
-
-
+    [C_balanced,info1] = pidtune(tfmodel_2o,'PID',opt);
+    [C_following,info2] = pidtune(tfmodel_2o,'PID',opt1);
+    [C_reacting,info3] = pidtune(tfmodel_2o,'PID',opt2);
 end
