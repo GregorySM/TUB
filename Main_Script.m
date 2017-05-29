@@ -39,9 +39,10 @@ Import_data_d5 = 0;
 Import_data_d10 = 0;
 Import_data_sinus = 0;
 Import_data_continuous = 1;
-%
-Model_estimation = 1;
 
+% Flags
+Model_estimation = 0;
+Wind_Model_estimation = 0;
 
 %% Delta 1
 if Import_data_d1 == 1
