@@ -8,7 +8,7 @@ clc
 %cd 'C:\Users\Greg\Documents\TU Berlin\System Identification'
 
 read_and_convert_tdms = 0; 
-BRBM_callib = load('dms_calib.mat');
+BRBM_callib = load('dms_calib.mat'); % strain gauge calib
 format long
 
 
@@ -25,24 +25,24 @@ Ts = 1/Fs;      % Sampling period [s]
 
 r_speed = 3;    % Motor Rotational speed [Hz]
 
-P = [3 6 8 12]; % 1p 2p 3p 4p
+P = [3 6 9 12]; % 1p 2p 3p 4p
 % Curves
 
-flag_BRBM_Beta_Curve = 0;   % Blade Root Bending Moment Against Flap angle
+flag_BRBM_Beta_Curve = 0;       % Blade Root Bending Moment Against Flap angle
 flag_response_time_curves = 0;  % Servos and BRBM Step Response
 
 % Import Data 
-Import_data_Wind = 0;
-Import_data_d1 = 0;
-Import_data_d2 = 0;
-Import_data_d5 = 0;
-Import_data_d10 = 0;
-Import_data_sinus = 0;
-Import_data_continuous = 1;
+Import_data_Wind       = 0;
+Import_data_d1         = 0; % one single discrete step changes beta- 1° deltas
+Import_data_d2         = 0; % one single discrete step changes beta- 2° deltas
+Import_data_d5         = 0; % one single discrete step changes beta- 5° deltas
+Import_data_d10        = 0; % one single discrete step changes beta- 10° deltas
+Import_data_sinus      = 0; % sin inputs with different frequencies
+Import_data_continuous = 1; % random step changes within one file!
 
 % Flags
-Model_estimation = 0;
-Wind_Model_estimation = 0;
+Model_estimation       = 0; % finds TF beta flap to BRB
+Wind_Model_estimation  = 0; % finds TF for GROWIKA FAN (WIND VEL) to BRB
 
 %% Delta 1
 if Import_data_d1 == 1
@@ -197,7 +197,8 @@ if Import_data_continuous == 1
 
 
     for i=1:size(files_Continuous,2)
-    
+     % imports all continous measurements and puts them into one row (each
+     % expiremt corresponds to one line!)
         file{i} = strcat(folder,files_Continuous{:,i});   
         if read_and_convert_tdms == 1
             matFileName=simpleConvertTDMS(file{i});
@@ -262,24 +263,26 @@ if Import_data_continuous == 1
 end
 %% Delay estimation
 % Experiments for estimation
-d_Es = Data_C(2).iddata;
+d_Es = Data_C(2).iddata; % Estimation data - used to find Model (+/- 5° max flap angle)
   
-d_Vs = Data_C(4).iddata;
+d_Vs = Data_C(4).iddata; % Validation data - used to valid found model (+/- 5° max flap angle)
 
-d_E = Data_C(1).iddata;
+d_E = Data_C(1).iddata;  
   
 d_V = Data_C(3).iddata;
 
 %% System identification
 
 % Wind Model
+% change of inflow velocity by GroWika Fan adjustment
+% graphical system identifaction (Ziegler - Nichols)
 if Wind_Model_estimation == 1
     N = length(Data_Wind(2).filtered);
     t = (0:N-1)/Fs;
     plot(t,Data_Wind(1).filtered - 36.4)
     %
-    t1 = 15.7;
-    t2 = 19;
+    t1 = 15.7; % time, manually determined
+    t2 = 19;   % time, manually determined
     tau = 3/2 * (t2 - t1);
     theta = t2 - tau;
 
@@ -291,25 +294,25 @@ end
 % Smart blade Model
 %------------------------- Model Estimation -------------------------%
 if Model_estimation == 1
-    % State space
+    ident % opens graphical tool for identification (shall be replaced by code)
+    % State space (state space estimation using subspace method)
     opt = n4sidOptions('Focus','simulation','Display','on','N4weight','CVA');
-    opt2 = n4sidOptions('Focus','simulation','Display','on','N4weight','MOESP');
-    ss = n4sid(d_C,4,opt);
-    ss2 = n4sid(d,4,opt2);
+    SS_model = n4sid(d_Es,4,opt);
+    
     
     %------------ Tranfer Function models ------------%
-    tfmodel_1o = tfest(d_Es,1,0);   % 1st order Transfer Function 
 
-    tfmodel_2o = tfest(d_Es,2,1);   % 2nd order Transfer Function 
+    TF_model = tfest(d_Es,2,1);   % 2nd order Transfer Function 
 
     %------------ ARMAX MODELS ------------%
     % Armax model estimation with focus on simulation and method Levenberg-Marquardt
+    % not used right now
     opt2 = armaxOptions;
     opt2.Focus = 'simulation';
     opt2.SearchMethod = 'lm';
     opt2.SearchOption.MaxIter = 10;
     opt2.Display = 'off';
-    m_polylm = armax(d1,[2 2 2 1],opt2);
+    Poly_model = armax(d_Es,[2 2 2 1],opt2);
     
     %------------------------- Neural Network ---------------------%
 
@@ -322,16 +325,25 @@ if Model_estimation == 1
     % ytest = Data_d5(2).filtered(10000:end);
 
     %------------------------- Comparison -------------------------%
-    compare(d_E,TF_model,SS_model)
+    % compares input (Experiment), compares 
+    % experimental output and estimated output 
+    compare(d_E,TF_model,SS_model,Poly_model)
 
-    compare(d_V,tfmodel_2o,tf3)
+    compare(d_Vs,TF_model,SS_model,Poly_model)
     
     %------------------------- Control Design -------------------------%
     opt = pidtuneOptions('DesignFocus','balanced');
     opt1 = pidtuneOptions('DesignFocus','reference-tracking');
     opt2 = pidtuneOptions('DesignFocus','disturbance-rejection');
-
-    [C_balanced,info1] = pidtune(tfmodel_2o,'PID',opt);
-    [C_following,info2] = pidtune(tfmodel_2o,'PID',opt1);
-    [C_reacting,info3] = pidtune(tfmodel_2o,'PID',opt2);
+% this stuff works, but graphical pid tuning (pidTuner) works better, as 
+% slightly faster response for example can be set easy (not possible in
+% coded stuff)
+    [C_balanced,info1] = pidtune(SS_model,'PID',opt);
+    [C_following,info2] = pidtune(SS_model,'PID',opt1);
+    [C_reacting,info3] = pidtune(SS_model,'PID',opt2);
+    % pidtune returns parallel pid controller form: Kp, Ki, Kd,
+    % labview needs Kp, Ti, Td
+    % convert using: Ti =   #
+    % Greg did this using the graphical pid tuner changing from parallel to
+    % standard form! technically, convertion should work as well!
 end
